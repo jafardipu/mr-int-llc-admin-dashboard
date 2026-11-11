@@ -1,0 +1,215 @@
+"use client";
+
+import Image from "next/image";
+import { useEffect, useRef, useState } from "react";
+import {
+  useCreateBannerMutation,
+  useGetBannerQuery,
+  useUpdateBannerMutation,
+} from "@/store/api";
+
+export function BannerForm({
+  id,
+  onDone,
+}: {
+  id?: string;
+  onDone?: () => void;
+}) {
+  const fileRef = useRef<HTMLInputElement>(null);
+  const { data: existing } = useGetBannerQuery(id as string, { skip: !id });
+  const [createBanner, createState] = useCreateBannerMutation();
+  const [updateBanner, updateState] = useUpdateBannerMutation();
+  const [title, setTitle] = useState("");
+  const [subtitle, setSubtitle] = useState("");
+  const [link, setLink] = useState("");
+  const [position, setPosition] = useState(0);
+  const [isActive, setIsActive] = useState(true);
+  const [preview, setPreview] = useState<string | null>(null);
+  const [file, setFile] = useState<File | null>(null);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    const banner = existing?.data;
+    if (!banner) return;
+    setTitle(banner.title ?? "");
+    setSubtitle(banner.subtitle ?? "");
+    setLink(banner.link ?? "");
+    setPosition(banner.position ?? 0);
+    setIsActive(banner.isActive !== false);
+    setPreview(banner.image ?? null);
+  }, [existing]);
+
+  function onPick(files: FileList | null) {
+    const next = files?.[0];
+    if (!next) return;
+    setFile(next);
+    setPreview(URL.createObjectURL(next));
+  }
+
+  async function onSubmit(event: React.FormEvent) {
+    event.preventDefault();
+    setError("");
+    if (!id && !file && !preview) {
+      setError("Carousel image is required");
+      return;
+    }
+
+    const payload: Record<string, unknown> = {
+      title,
+      subtitle: subtitle || undefined,
+      link: link || undefined,
+      position: Number(position) || 0,
+      isActive,
+    };
+    if (!file && preview && !preview.startsWith("blob:")) {
+      payload.image = preview;
+    }
+
+    const body = new FormData();
+    body.append("data", JSON.stringify(payload));
+    if (file) body.append("image", file);
+
+    try {
+      if (id) {
+        await updateBanner({ id, body }).unwrap();
+      } else {
+        await createBanner(body).unwrap();
+      }
+      onDone?.();
+    } catch (err) {
+      const message =
+        err && typeof err === "object" && "data" in err
+          ? ((err.data as { message?: string })?.message ?? "Save failed")
+          : "Save failed";
+      setError(message);
+    }
+  }
+
+  const loading = createState.isLoading || updateState.isLoading;
+
+  return (
+    <form onSubmit={onSubmit} className="space-y-5">
+      <label className="block">
+        <span className="mb-2 block text-sm font-semibold">
+          Title <span className="text-danger">*</span>
+        </span>
+        <input
+          value={title}
+          onChange={(event) => setTitle(event.target.value)}
+          placeholder="e.g. Wholesale Ready Inventory"
+          className="h-12 w-full rounded-full border border-line bg-input px-4 text-sm outline-none focus:border-brand"
+          required
+        />
+      </label>
+
+      <label className="block">
+        <span className="mb-2 block text-sm font-semibold">Subtitle</span>
+        <input
+          value={subtitle}
+          onChange={(event) => setSubtitle(event.target.value)}
+          placeholder="Short supporting line for the slide"
+          className="h-12 w-full rounded-full border border-line bg-input px-4 text-sm outline-none focus:border-brand"
+        />
+      </label>
+
+      <label className="block">
+        <span className="mb-2 block text-sm font-semibold">Link URL</span>
+        <input
+          value={link}
+          onChange={(event) => setLink(event.target.value)}
+          placeholder="/products or https://..."
+          className="h-12 w-full rounded-full border border-line bg-input px-4 text-sm outline-none focus:border-brand"
+        />
+      </label>
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <label className="block">
+          <span className="mb-2 block text-sm font-semibold">Position</span>
+          <input
+            type="number"
+            min={0}
+            value={position}
+            onChange={(event) => setPosition(Number(event.target.value))}
+            className="h-12 w-full rounded-full border border-line bg-input px-4 text-sm outline-none focus:border-brand"
+          />
+        </label>
+        <div>
+          <p className="mb-2 text-sm font-semibold">Status</p>
+          <div className="flex h-12 items-center gap-5 rounded-full border border-line bg-input px-4 text-sm">
+            <label className="flex items-center gap-2">
+              <input
+                type="radio"
+                checked={isActive}
+                onChange={() => setIsActive(true)}
+              />
+              Active
+            </label>
+            <label className="flex items-center gap-2">
+              <input
+                type="radio"
+                checked={!isActive}
+                onChange={() => setIsActive(false)}
+              />
+              Hidden
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <p className="mb-2 text-sm font-semibold">
+          Carousel Image {!id ? <span className="text-danger">*</span> : null}
+        </p>
+        <button
+          type="button"
+          onClick={() => fileRef.current?.click()}
+          className="flex min-h-[180px] w-full flex-col items-center justify-center rounded-2xl border border-dashed border-line bg-[#faf8f5] px-4 py-8 text-center text-sm text-muted"
+        >
+          {preview ? (
+            <Image
+              src={preview}
+              alt=""
+              width={420}
+              height={160}
+              className="h-40 w-full rounded-xl object-cover"
+              unoptimized
+            />
+          ) : (
+            <>
+              <span className="mb-2 text-2xl text-brand">+</span>
+              Click to upload carousel image
+              <br />
+              Recommended 1400×500 · PNG, JPG or WebP
+            </>
+          )}
+        </button>
+        <input
+          ref={fileRef}
+          type="file"
+          accept="image/png,image/jpeg,image/webp"
+          hidden
+          onChange={(event) => onPick(event.target.files)}
+        />
+      </div>
+
+      {error ? <p className="text-sm text-danger">{error}</p> : null}
+
+      <div className="flex justify-end gap-3 pt-1">
+        <button
+          type="button"
+          onClick={onDone}
+          className="h-11 rounded-full border border-line bg-white px-5 text-sm font-semibold text-slate"
+        >
+          Cancel
+        </button>
+        <button
+          type="submit"
+          disabled={loading}
+          className="h-11 rounded-full bg-brand px-5 text-sm font-semibold text-white disabled:opacity-60"
+        >
+          {loading ? "Saving..." : id ? "Update Slide" : "Add Slide"}
+        </button>
+      </div>
+    </form>
+  );
+}
