@@ -72,7 +72,14 @@ export default function ProductDetailsPage() {
                 <h2 className="text-2xl font-bold">{product?.name || "—"}</h2>
                 <p className="mt-1 text-sm text-muted">{product?.description || "No description yet."}</p>
               </div>
-              <StatusPill value={product?.status} />
+              <div className="flex flex-wrap items-center gap-2">
+                {product?.isFeatured ? (
+                  <span className="inline-flex items-center rounded-full bg-[#fff4e5] px-3 py-1 text-xs font-semibold text-[#c2410c]">
+                    Featured
+                  </span>
+                ) : null}
+                <StatusPill value={product?.status} />
+              </div>
             </div>
             <dl className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
               <Info label="Brand" value={product?.brand?.name} />
@@ -80,7 +87,6 @@ export default function ProductDetailsPage() {
               <Info label="ASIN No" value={product?.asin} />
               <Info label="Stock" value={product ? String(product.stock) : "—"} />
               <Info label="Category" value={product?.category?.name} />
-              <Info label="Subcategory" value={product?.subcategory} />
               <Info label="Price / MSRP" value={money(product?.retailPrice)} />
               <Info label="Wholesale Base" value={money(product?.wholesalePrice)} />
             </dl>

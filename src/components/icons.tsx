@@ -117,6 +117,14 @@ export function IconPromo(props: IconProps) {
   );
 }
 
+export function IconDeal(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <path d="M12 3v18M5 8h10a3 3 0 0 1 0 6H7a3 3 0 0 0 0 6h12" />
+    </svg>
+  );
+}
+
 export function IconFaq(props: IconProps) {
   return (
     <svg {...base(props)}>

@@ -103,6 +103,27 @@ export interface PromoCodeRecord {
   updatedAt?: string;
 }
 
+export type DealType = "weekly" | "clearance";
+
+export interface DealRecord {
+  id: string;
+  productId: string;
+  dealPrice: number;
+  type: DealType;
+  startDate?: string | null;
+  endDate?: string | null;
+  isActive?: boolean;
+  product?: {
+    id: string;
+    name: string;
+    sku?: string;
+    retailPrice?: number;
+    images?: { id?: string; url: string; isPrimary?: boolean }[];
+  };
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 export interface OrderItemRecord {
   id: string;
   name: string;
@@ -133,11 +154,11 @@ export interface ProductRecord {
   status?: string;
   brandId?: string;
   categoryId?: string;
-  subcategory?: string | null;
   asin?: string | null;
   amazonUrl?: string | null;
   walmartUrl?: string | null;
   volumeTiers?: VolumeTier[] | null;
+  isFeatured?: boolean;
   isDeal?: boolean;
   dealPrice?: number | null;
   avgRating?: number;
@@ -198,11 +219,8 @@ export interface ContentsRecord {
 
 export interface BannerRecord {
   id: string;
-  title: string;
   image: string;
-  subtitle?: string | null;
   link?: string | null;
-  position?: number;
   isActive?: boolean;
   isDeleted?: boolean;
   createdAt?: string;

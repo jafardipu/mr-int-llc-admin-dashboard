@@ -10,6 +10,7 @@ import { DeleteAction, EditAction, TableActions } from "@/components/table-actio
 import { Modal, Toolbar } from "@/components/ui";
 import { prettyDate } from "@/lib/format";
 import type { BrandRecord } from "@/lib/types";
+
 import { asList, useDeleteBrandMutation, useGetBrandsQuery } from "@/store/api";
 
 export default function BrandsPage() {

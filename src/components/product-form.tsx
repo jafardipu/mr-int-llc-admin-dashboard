@@ -43,11 +43,11 @@ export function ProductForm({ id }: { id?: string }) {
     stock: "0",
     brandId: "",
     categoryId: "",
-    subcategory: "",
     status: "active",
     amazonUrl: "",
     walmartUrl: "",
   });
+  const [isFeatured, setIsFeatured] = useState(false);
   const [tiers, setTiers] = useState<VolumeTier[]>([]);
   const [previews, setPreviews] = useState<Preview[]>([]);
   const [error, setError] = useState("");
@@ -66,11 +66,11 @@ export function ProductForm({ id }: { id?: string }) {
       stock: String(product.stock ?? 0),
       brandId: product.brandId ?? product.brand?.id ?? "",
       categoryId: product.categoryId ?? product.category?.id ?? "",
-      subcategory: product.subcategory ?? "",
       status: product.status ?? "active",
       amazonUrl: product.amazonUrl ?? "",
       walmartUrl: product.walmartUrl ?? "",
     });
+    setIsFeatured(product.isFeatured === true);
     setTiers(Array.isArray(product.volumeTiers) ? product.volumeTiers : []);
     setPreviews(
       (product.images ?? []).map((image) => ({ url: image.url, existing: true })),
@@ -108,10 +108,10 @@ export function ProductForm({ id }: { id?: string }) {
       stock: Number(form.stock),
       brandId: form.brandId,
       categoryId: form.categoryId,
-      subcategory: form.subcategory || null,
       status: form.status,
       amazonUrl: form.amazonUrl || null,
       walmartUrl: form.walmartUrl || null,
+      isFeatured,
       keepImages: previews.filter((item) => item.existing).map((item) => item.url),
       volumeTiers: tiers.filter((tier) => tier.minQty && tier.unitPrice),
     };
@@ -233,9 +233,18 @@ export function ProductForm({ id }: { id?: string }) {
                     ))}
                   </select>
                 </Field>
-                <Field label="Subcategory">
-                  <input value={form.subcategory} onChange={(e) => set("subcategory", e.target.value)} className={inputClass} />
-                </Field>
+                <div>
+                  <p className="mb-2 text-sm font-semibold text-label">Featured</p>
+                  <label className="flex h-12 cursor-pointer items-center gap-3 rounded-full border border-line bg-input px-5 text-sm font-semibold">
+                    <input
+                      type="checkbox"
+                      checked={isFeatured}
+                      onChange={(e) => setIsFeatured(e.target.checked)}
+                      className="size-4 accent-[var(--brand,#c45c26)]"
+                    />
+                    Featured product
+                  </label>
+                </div>
               </div>
               <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
                 <Field label="Price / MSRP" required>

@@ -1,7 +1,8 @@
 "use client";
 
 import Image from "next/image";
-import { useMemo, useState } from "react";
+import Link from "next/link";
+import { useState } from "react";
 import { BannerForm } from "@/components/banner-form";
 import { Pagination, Table, TableCard, THead } from "@/components/data-table";
 import { IconPlus } from "@/components/icons";
@@ -9,6 +10,7 @@ import { PageHeader } from "@/components/page-header";
 import { StatusPill } from "@/components/status-pill";
 import { DeleteAction, EditAction, TableActions } from "@/components/table-actions";
 import { Modal, Toolbar } from "@/components/ui";
+import { prettyDate } from "@/lib/format";
 import type { BannerRecord } from "@/lib/types";
 import { asList, useDeleteBannerMutation, useGetBannersQuery } from "@/store/api";
 
@@ -19,25 +21,17 @@ export default function CarouselPage() {
   const [createOpen, setCreateOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [remove] = useDeleteBannerMutation();
+  const limit = 8;
+
   const { data, isLoading } = useGetBannersQuery({
-    page: 1,
-    limit: 100,
+    page,
+    limit,
     searchTerm: search || undefined,
+    sort: "-createdAt",
+    isActive: status === "active" ? true : status === "hidden" ? false : undefined,
   });
   const list = asList<BannerRecord>(data?.data);
-
-  const filtered = useMemo(
-    () =>
-      list.items.filter((banner) => {
-        if (status === "active") return banner.isActive !== false;
-        if (status === "hidden") return banner.isActive === false;
-        return true;
-      }),
-    [list.items, status],
-  );
-
-  const limit = 8;
-  const pageItems = filtered.slice((page - 1) * limit, page * limit);
+  const total = list.total;
 
   return (
     <div>
@@ -45,7 +39,14 @@ export default function CarouselPage() {
         title="Carousel / Banners"
         description="Add and manage homepage carousel slides shown on the storefront."
       />
-      <Toolbar search={search} onSearch={(value) => { setSearch(value); setPage(1); }} placeholder="Search by title...">
+      <Toolbar
+        search={search}
+        onSearch={(value) => {
+          setSearch(value);
+          setPage(1);
+        }}
+        placeholder="Search by link..."
+      >
         <select
           value={status}
           onChange={(event) => {
@@ -64,19 +65,19 @@ export default function CarouselPage() {
           className="inline-flex h-11 items-center gap-2 rounded-full bg-brand px-5 text-sm font-semibold text-white"
         >
           <IconPlus className="size-4" />
-          Add Slide
+          Add Banner
         </button>
       </Toolbar>
 
       <TableCard
         footer={
-          <Pagination page={page} total={filtered.length} limit={limit} onPage={setPage} />
+          <Pagination page={page} total={total} limit={limit} onPage={setPage} />
         }
       >
         <Table>
-          <THead columns={["Preview", "Title", "Link", "Position", "Status", "Actions"]} />
+          <THead columns={["Preview", "Link", "Status", "Created", "Actions"]} />
           <tbody>
-            {pageItems.map((banner) => (
+            {list.items.map((banner) => (
               <tr key={banner.id} className="border-t border-line-soft">
                 <td className="px-6 py-4">
                   <Image
@@ -88,17 +89,24 @@ export default function CarouselPage() {
                     unoptimized
                   />
                 </td>
-                <td className="px-6 py-4">
-                  <p className="font-semibold text-ink">{banner.title}</p>
-                  {banner.subtitle ? (
-                    <p className="mt-1 max-w-xs truncate text-xs text-muted">{banner.subtitle}</p>
-                  ) : null}
+                <td className="px-6 py-4 text-sm">
+                  {banner.link ? (
+                    <Link
+                      href={banner.link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-brand underline underline-offset-2 hover:opacity-80"
+                    >
+                      Project link
+                    </Link>
+                  ) : (
+                    <span className="text-slate">—</span>
+                  )}
                 </td>
-                <td className="px-6 py-4 text-sm text-slate">{banner.link || "—"}</td>
-                <td className="px-6 py-4">{banner.position ?? 0}</td>
                 <td className="px-6 py-4">
                   <StatusPill value={banner.isActive === false ? "inactive" : "active"} />
                 </td>
+                <td className="px-6 py-4 text-slate">{prettyDate(banner.createdAt)}</td>
                 <td className="px-6 py-4">
                   <TableActions>
                     <EditAction onClick={() => setEditId(banner.id)} />
@@ -107,9 +115,9 @@ export default function CarouselPage() {
                 </td>
               </tr>
             ))}
-            {!isLoading && pageItems.length === 0 ? (
+            {!isLoading && list.items.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-6 py-10 text-center text-sm text-muted">
+                <td colSpan={5} className="px-6 py-10 text-center text-sm text-muted">
                   No carousel slides yet. Add your first homepage banner.
                 </td>
               </tr>
@@ -121,8 +129,8 @@ export default function CarouselPage() {
       <Modal
         open={createOpen}
         onClose={() => setCreateOpen(false)}
-        title="Add Carousel Slide"
-        description="Upload an image and set title, link, and display order."
+        title="Add Banner"
+        description="Upload an image and optionally set a CTA link and visibility."
       >
         <BannerForm onDone={() => setCreateOpen(false)} />
       </Modal>
@@ -130,8 +138,8 @@ export default function CarouselPage() {
       <Modal
         open={Boolean(editId)}
         onClose={() => setEditId(null)}
-        title="Edit Carousel Slide"
-        description="Update slide content, image, or visibility."
+        title="Edit Banner"
+        description="Update banner image, link, or visibility."
       >
         {editId ? <BannerForm id={editId} onDone={() => setEditId(null)} /> : null}
       </Modal>

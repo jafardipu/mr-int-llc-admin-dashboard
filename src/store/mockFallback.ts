@@ -12,6 +12,7 @@ import {
   mockOverview,
   mockPayments,
   mockPrep,
+  mockDeals,
   mockProducts,
   mockPromoCodes,
   mockUser,
@@ -218,8 +219,45 @@ export function mockFallback(args: string | FetchArgs): Envelope<unknown> | null
       message: "Mock promo codes",
     };
   }
+  if (url.startsWith("/deals/weekly")) {
+    const weekly = mockDeals.filter((item) => item.type === "weekly");
+    return {
+      data: { data: weekly, meta: { total: weekly.length, page: 1, limit: 20 } },
+      message: "Mock weekly deals",
+    };
+  }
+  if (url.startsWith("/deals/clearance")) {
+    const clearance = mockDeals.filter((item) => item.type === "clearance");
+    return {
+      data: { data: clearance, meta: { total: clearance.length, page: 1, limit: 20 } },
+      message: "Mock clearance deals",
+    };
+  }
+  if (url.startsWith("/deals/") && url !== "/deals") {
+    const id = url.replace("/deals/", "").split("?")[0];
+    return {
+      data: mockDeals.find((item) => item.id === id) ?? mockDeals[0],
+      message: "Mock deal",
+    };
+  }
+  if (url.startsWith("/deals")) {
+    return {
+      data: {
+        data: mockDeals,
+        meta: { total: mockDeals.length, page: 1, limit: 20 },
+      },
+      message: "Mock deals",
+    };
+  }
+  if (url.startsWith("/banners/homepage")) {
+    const active = mockBanners.filter((item) => item.isActive !== false && !item.isDeleted);
+    return {
+      data: { data: active, meta: { total: active.length, page: 1, limit: 20 } },
+      message: "Homepage banners fetched successfully",
+    };
+  }
   if (url.startsWith("/banners/") && url !== "/banners") {
-    const id = url.replace("/banners/", "");
+    const id = url.replace("/banners/", "").split("?")[0];
     return {
       data: mockBanners.find((item) => item.id === id) ?? mockBanners[0],
       message: "Mock banner",

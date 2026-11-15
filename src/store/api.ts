@@ -6,6 +6,8 @@ import type {
   BrandRecord,
   CategoryRecord,
   ContentsRecord,
+  DealRecord,
+  DealType,
   FaqRecord,
   NotificationRecord,
   SupportMessageRecord,
@@ -27,6 +29,8 @@ type ListParams = {
   categoryId?: string;
   customerType?: string;
   isActive?: boolean | string;
+  isFeatured?: boolean | string;
+  type?: DealType | string;
   sort?: string;
 };
 
@@ -49,6 +53,7 @@ export const api = createApi({
     "Faqs",
     "SupportMessages",
     "PromoCodes",
+    "Deals",
   ],
   endpoints: (build) => ({
     login: build.mutation<Envelope<AuthPayload>, { email: string; password: string }>({
@@ -236,12 +241,22 @@ export const api = createApi({
       invalidatesTags: ["Notifications"],
     }),
     getBanners: build.query<
-      Envelope<{ data: BannerRecord[]; meta?: { total?: number } }>,
+      Envelope<{ data: BannerRecord[]; meta?: { page?: number; limit?: number; total?: number } }>,
       ListParams | void
     >({
       query: (params) => ({
         url: "/banners",
-        params: params ?? { page: 1, limit: 50, sort: "position,-createdAt" },
+        params: params ?? { page: 1, limit: 50, sort: "-createdAt" },
+      }),
+      providesTags: ["Banners"],
+    }),
+    getHomepageBanners: build.query<
+      Envelope<{ data: BannerRecord[]; meta?: { page?: number; limit?: number; total?: number } }>,
+      { page?: number; limit?: number; sort?: string } | void
+    >({
+      query: (params) => ({
+        url: "/banners/homepage",
+        params: params ?? { page: 1, limit: 20, sort: "-createdAt" },
       }),
       providesTags: ["Banners"],
     }),
@@ -352,6 +367,35 @@ export const api = createApi({
       query: (id) => ({ url: `/promo-codes/${id}`, method: "DELETE" }),
       invalidatesTags: ["PromoCodes"],
     }),
+    getDeals: build.query<
+      Envelope<{ data: DealRecord[]; meta?: { page?: number; limit?: number; total?: number } }>,
+      ListParams | void
+    >({
+      query: (params) => ({
+        url: "/deals",
+        params: params ?? { page: 1, limit: 20 },
+      }),
+      providesTags: ["Deals"],
+    }),
+    getDeal: build.query<Envelope<DealRecord>, string>({
+      query: (id) => `/deals/${id}`,
+      providesTags: (_r, _e, id) => [{ type: "Deals", id }],
+    }),
+    createDeal: build.mutation<Envelope<DealRecord>, Record<string, unknown>>({
+      query: (body) => ({ url: "/deals", method: "POST", body }),
+      invalidatesTags: ["Deals", "Products"],
+    }),
+    updateDeal: build.mutation<
+      Envelope<DealRecord>,
+      { id: string; body: Record<string, unknown> }
+    >({
+      query: ({ id, body }) => ({ url: `/deals/${id}`, method: "PATCH", body }),
+      invalidatesTags: ["Deals", "Products"],
+    }),
+    deleteDeal: build.mutation<Envelope<unknown>, string>({
+      query: (id) => ({ url: `/deals/${id}`, method: "DELETE" }),
+      invalidatesTags: ["Deals", "Products"],
+    }),
   }),
 });
 
@@ -393,6 +437,7 @@ export const {
   useReadNotificationsMutation,
   useDeleteNotificationsMutation,
   useGetBannersQuery,
+  useGetHomepageBannersQuery,
   useGetBannerQuery,
   useCreateBannerMutation,
   useUpdateBannerMutation,
@@ -410,6 +455,11 @@ export const {
   useCreatePromoCodeMutation,
   useUpdatePromoCodeMutation,
   useDeletePromoCodeMutation,
+  useGetDealsQuery,
+  useGetDealQuery,
+  useCreateDealMutation,
+  useUpdateDealMutation,
+  useDeleteDealMutation,
 } = api;
 
 export { asList };

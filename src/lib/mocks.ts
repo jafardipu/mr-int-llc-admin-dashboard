@@ -4,6 +4,7 @@ import type {
   BrandRecord,
   CategoryRecord,
   ContentsRecord,
+  DealRecord,
   FaqRecord,
   SupportMessageRecord,
   NotificationRecord,
@@ -79,6 +80,7 @@ const products: ProductRecord[] = [
     wholesalePrice: 84,
     stock: 140,
     status: "active",
+    isFeatured: true,
     category: { id: "cat1", name: "Electronics" },
     images: [{ id: "i1", url: "/images/product-headphones.png", isPrimary: true }],
   },
@@ -90,6 +92,7 @@ const products: ProductRecord[] = [
     wholesalePrice: 168,
     stock: 62,
     status: "active",
+    isFeatured: true,
     category: { id: "cat1", name: "Electronics" },
     images: [{ id: "i2", url: "/images/product-2.png", isPrimary: true }],
   },
@@ -101,6 +104,7 @@ const products: ProductRecord[] = [
     wholesalePrice: 132,
     stock: 18,
     status: "active",
+    isFeatured: false,
     category: { id: "cat2", name: "Wearables" },
     images: [{ id: "i3", url: "/images/product-3.png", isPrimary: true }],
   },
@@ -112,6 +116,7 @@ const products: ProductRecord[] = [
     wholesalePrice: 49,
     stock: 0,
     status: "inactive",
+    isFeatured: false,
     category: { id: "cat3", name: "Accessories" },
     images: [{ id: "i4", url: "/images/product-4.png", isPrimary: true }],
   },
@@ -123,6 +128,7 @@ const products: ProductRecord[] = [
     wholesalePrice: 29,
     stock: 210,
     status: "active",
+    isFeatured: false,
     category: { id: "cat3", name: "Accessories" },
     images: [{ id: "i5", url: "/images/product-5.png", isPrimary: true }],
   },
@@ -348,6 +354,43 @@ export const mockSupportMessages: SupportMessageRecord[] = [
   },
 ];
 
+export const mockDeals: DealRecord[] = [
+  {
+    id: "deal1",
+    productId: "p1",
+    dealPrice: 89,
+    type: "weekly",
+    startDate: now,
+    endDate: now,
+    isActive: true,
+    product: {
+      id: "p1",
+      name: "Wireless Headphones",
+      sku: "MR-HP-001",
+      retailPrice: 120,
+      images: [{ id: "i1", url: "/images/product-headphones.png", isPrimary: true }],
+    },
+    createdAt: now,
+  },
+  {
+    id: "deal2",
+    productId: "p5",
+    dealPrice: 24,
+    type: "clearance",
+    startDate: now,
+    endDate: null,
+    isActive: true,
+    product: {
+      id: "p5",
+      name: "Desk Lamp",
+      sku: "MR-LM-011",
+      retailPrice: 46,
+      images: [{ id: "i5", url: "/images/product-5.png", isPrimary: true }],
+    },
+    createdAt: now,
+  },
+];
+
 export const mockPromoCodes: PromoCodeRecord[] = [
   {
     id: "promo1",
@@ -402,21 +445,15 @@ export const mockFaqs: FaqRecord[] = [
 export const mockBanners: BannerRecord[] = [
   {
     id: "banner1",
-    title: "Wholesale Ready Inventory",
-    subtitle: "Retail and wholesale pricing on every product.",
     image: "https://placehold.co/1400x500?text=MR+International",
     link: "/products",
-    position: 1,
     isActive: true,
     createdAt: now,
   },
   {
     id: "banner2",
-    title: "Seasonal Deals",
-    subtitle: "Limited-time offers for retail shoppers.",
     image: "https://placehold.co/1400x500?text=Seasonal+Deals",
     link: "/products?deal=true",
-    position: 2,
     isActive: true,
     createdAt: now,
   },

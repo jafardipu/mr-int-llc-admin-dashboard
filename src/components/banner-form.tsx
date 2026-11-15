@@ -19,10 +19,7 @@ export function BannerForm({
   const { data: existing } = useGetBannerQuery(id as string, { skip: !id });
   const [createBanner, createState] = useCreateBannerMutation();
   const [updateBanner, updateState] = useUpdateBannerMutation();
-  const [title, setTitle] = useState("");
-  const [subtitle, setSubtitle] = useState("");
   const [link, setLink] = useState("");
-  const [position, setPosition] = useState(0);
   const [isActive, setIsActive] = useState(true);
   const [preview, setPreview] = useState<string | null>(null);
   const [file, setFile] = useState<File | null>(null);
@@ -31,10 +28,7 @@ export function BannerForm({
   useEffect(() => {
     const banner = existing?.data;
     if (!banner) return;
-    setTitle(banner.title ?? "");
-    setSubtitle(banner.subtitle ?? "");
     setLink(banner.link ?? "");
-    setPosition(banner.position ?? 0);
     setIsActive(banner.isActive !== false);
     setPreview(banner.image ?? null);
   }, [existing]);
@@ -49,21 +43,15 @@ export function BannerForm({
   async function onSubmit(event: React.FormEvent) {
     event.preventDefault();
     setError("");
-    if (!id && !file && !preview) {
+    if (!id && !file) {
       setError("Carousel image is required");
       return;
     }
 
     const payload: Record<string, unknown> = {
-      title,
-      subtitle: subtitle || undefined,
-      link: link || undefined,
-      position: Number(position) || 0,
       isActive,
+      link: link.trim() || null,
     };
-    if (!file && preview && !preview.startsWith("blob:")) {
-      payload.image = preview;
-    }
 
     const body = new FormData();
     body.append("data", JSON.stringify(payload));
@@ -89,76 +77,9 @@ export function BannerForm({
 
   return (
     <form onSubmit={onSubmit} className="space-y-5">
-      <label className="block">
-        <span className="mb-2 block text-sm font-semibold">
-          Title <span className="text-danger">*</span>
-        </span>
-        <input
-          value={title}
-          onChange={(event) => setTitle(event.target.value)}
-          placeholder="e.g. Wholesale Ready Inventory"
-          className="h-12 w-full rounded-full border border-line bg-input px-4 text-sm outline-none focus:border-brand"
-          required
-        />
-      </label>
-
-      <label className="block">
-        <span className="mb-2 block text-sm font-semibold">Subtitle</span>
-        <input
-          value={subtitle}
-          onChange={(event) => setSubtitle(event.target.value)}
-          placeholder="Short supporting line for the slide"
-          className="h-12 w-full rounded-full border border-line bg-input px-4 text-sm outline-none focus:border-brand"
-        />
-      </label>
-
-      <label className="block">
-        <span className="mb-2 block text-sm font-semibold">Link URL</span>
-        <input
-          value={link}
-          onChange={(event) => setLink(event.target.value)}
-          placeholder="/products or https://..."
-          className="h-12 w-full rounded-full border border-line bg-input px-4 text-sm outline-none focus:border-brand"
-        />
-      </label>
-
-      <div className="grid gap-4 sm:grid-cols-2">
-        <label className="block">
-          <span className="mb-2 block text-sm font-semibold">Position</span>
-          <input
-            type="number"
-            min={0}
-            value={position}
-            onChange={(event) => setPosition(Number(event.target.value))}
-            className="h-12 w-full rounded-full border border-line bg-input px-4 text-sm outline-none focus:border-brand"
-          />
-        </label>
-        <div>
-          <p className="mb-2 text-sm font-semibold">Status</p>
-          <div className="flex h-12 items-center gap-5 rounded-full border border-line bg-input px-4 text-sm">
-            <label className="flex items-center gap-2">
-              <input
-                type="radio"
-                checked={isActive}
-                onChange={() => setIsActive(true)}
-              />
-              Active
-            </label>
-            <label className="flex items-center gap-2">
-              <input
-                type="radio"
-                checked={!isActive}
-                onChange={() => setIsActive(false)}
-              />
-              Hidden
-            </label>
-          </div>
-        </div>
-      </div>
-
       <div>
         <p className="mb-2 text-sm font-semibold">
-          Carousel Image {!id ? <span className="text-danger">*</span> : null}
+          Banner Image {!id ? <span className="text-danger">*</span> : null}
         </p>
         <button
           type="button"
@@ -177,7 +98,7 @@ export function BannerForm({
           ) : (
             <>
               <span className="mb-2 text-2xl text-brand">+</span>
-              Click to upload carousel image
+              Click to upload banner image
               <br />
               Recommended 1400×500 · PNG, JPG or WebP
             </>
@@ -190,6 +111,38 @@ export function BannerForm({
           hidden
           onChange={(event) => onPick(event.target.files)}
         />
+      </div>
+
+      <label className="block">
+        <span className="mb-2 block text-sm font-semibold">Link URL</span>
+        <input
+          value={link}
+          onChange={(event) => setLink(event.target.value)}
+          placeholder="https://products/..."
+          className="h-12 w-full rounded-full border border-line bg-input px-4 text-sm outline-none focus:border-brand"
+        />
+      </label>
+
+      <div>
+        <p className="mb-2 text-sm font-semibold">Status</p>
+        <div className="flex h-12 items-center gap-5 rounded-full border border-line bg-input px-4 text-sm">
+          <label className="flex items-center gap-2">
+            <input
+              type="radio"
+              checked={isActive}
+              onChange={() => setIsActive(true)}
+            />
+            Active
+          </label>
+          <label className="flex items-center gap-2">
+            <input
+              type="radio"
+              checked={!isActive}
+              onChange={() => setIsActive(false)}
+            />
+            Hidden
+          </label>
+        </div>
       </div>
 
       {error ? <p className="text-sm text-danger">{error}</p> : null}
@@ -207,7 +160,7 @@ export function BannerForm({
           disabled={loading}
           className="h-11 rounded-full bg-brand px-5 text-sm font-semibold text-white disabled:opacity-60"
         >
-          {loading ? "Saving..." : id ? "Update Slide" : "Add Slide"}
+          {loading ? "Saving..." : id ? "Update Banner" : "Add Banner"}
         </button>
       </div>
     </form>
