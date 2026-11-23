@@ -15,6 +15,7 @@ import type {
   OverviewData,
   PaymentRecord,
   PrepRecord,
+  PrepReviewStatus,
   ProductRecord,
   PromoCodeRecord,
 } from "@/lib/types";
@@ -26,6 +27,7 @@ type ListParams = {
   searchTerm?: string;
   role?: string;
   status?: string;
+  userId?: string;
   categoryId?: string;
   customerType?: string;
   isActive?: boolean | string;
@@ -107,7 +109,12 @@ export const api = createApi({
       invalidatesTags: ["Users"],
     }),
     getProducts: build.query<Envelope<{ data: ProductRecord[]; meta?: { total?: number } }>, ListParams | void>({
-      query: (params) => ({ url: "/products", params: params ?? { page: 1, limit: 10 } }),
+      // DELETE /products/:id is a soft delete (isDeleted: true), and the backend returns deleted
+      // products to admins unless asked not to, so always filter them out.
+      query: (params) => ({
+        url: "/products",
+        params: { ...(params ?? { page: 1, limit: 10 }), isDeleted: false },
+      }),
       providesTags: ["Products"],
     }),
     getProduct: build.query<Envelope<ProductRecord>, string>({
@@ -180,12 +187,15 @@ export const api = createApi({
     }),
     getOrders: build.query<Envelope<{ data: OrderRecord[] }>, ListParams | void>({
       query: (params) => ({ url: "/orders", params: params ?? { page: 1, limit: 10 } }),
-      providesTags: ["Orders"],
+      providesTags: [{ type: "Orders", id: "LIST" }],
     }),
     getOrder: build.query<Envelope<OrderRecord>, string>({
       query: (id) => `/orders/${id}`,
       providesTags: (_r, _e, id) => [{ type: "Orders", id }],
     }),
+    // The response is the full updated order, so the detail cache is replaced instead of refetched.
+    // Lists and counts are refreshed; cancelling also changes payments and stock. On any error the
+    // order and list refetch (e.g. another admin or the expiry job already cancelled it).
     updateOrderStatus: build.mutation<
       Envelope<OrderRecord>,
       { id: string; status: OrderRecord["status"] }
@@ -195,7 +205,29 @@ export const api = createApi({
         method: "PATCH",
         body: { status },
       }),
-      invalidatesTags: ["Orders", "Overview"],
+      async onQueryStarted({ id }, { dispatch, queryFulfilled }) {
+        try {
+          const { data } = await queryFulfilled;
+          dispatch(
+            api.util.updateQueryData("getOrder", id, (draft) => {
+              draft.data = data.data;
+              draft.message = data.message;
+            }),
+          );
+        } catch {
+          // Error is surfaced by the caller via unwrap().
+        }
+      },
+      invalidatesTags: (result, error, { id, status }) => {
+        if (error) return [{ type: "Orders", id }, { type: "Orders", id: "LIST" }];
+        const userId = result?.data.user?.id;
+        return [
+          { type: "Orders", id: "LIST" },
+          "Overview",
+          ...(userId ? [{ type: "Users" as const, id: userId }] : []),
+          ...(status === "cancelled" ? (["Payments", "Products"] as const) : []),
+        ];
+      },
     }),
     getPayments: build.query<Envelope<{ data: PaymentRecord[] }>, ListParams | void>({
       query: (params) => ({ url: "/payments", params: params ?? { page: 1, limit: 10 } }),
@@ -205,20 +237,46 @@ export const api = createApi({
       query: (id) => `/payments/${id}`,
       providesTags: (_r, _e, id) => [{ type: "Payments", id }],
     }),
-    getPrepRequests: build.query<Envelope<{ data: PrepRecord[] }>, ListParams | void>({
+    getPrepRequests: build.query<
+      Envelope<{ data: PrepRecord[]; meta?: { page?: number; limit?: number; total?: number } }>,
+      ListParams | void
+    >({
       query: (params) => ({ url: "/prep-services", params: params ?? { page: 1, limit: 10 } }),
-      providesTags: ["Prep"],
+      providesTags: [{ type: "Prep", id: "LIST" }],
     }),
+    getPrepRequest: build.query<Envelope<PrepRecord>, string>({
+      query: (id) => `/prep-services/${id}`,
+      providesTags: (_r, _e, id) => [{ type: "Prep", id }],
+    }),
+    // Only valid while the request is `under_review`. On success the response is merged into the
+    // detail cache (keeping `user` if the response omits it); on any error (e.g. 409, another admin
+    // reviewed it first) the detail refetches.
     updatePrepStatus: build.mutation<
       Envelope<PrepRecord>,
-      { id: string; status: string; adminNote?: string }
+      { id: string; status: PrepReviewStatus; adminNote?: string }
     >({
       query: ({ id, ...body }) => ({
         url: `/prep-services/${id}/status`,
         method: "PATCH",
         body,
       }),
-      invalidatesTags: ["Prep"],
+      async onQueryStarted({ id }, { dispatch, queryFulfilled }) {
+        try {
+          const { data } = await queryFulfilled;
+          dispatch(
+            api.util.updateQueryData("getPrepRequest", id, (draft) => {
+              draft.data = { ...draft.data, ...data.data, user: data.data.user ?? draft.data.user };
+              draft.message = data.message;
+            }),
+          );
+        } catch {
+          // Error is surfaced by the caller via unwrap().
+        }
+      },
+      invalidatesTags: (_r, error, { id }) =>
+        error
+          ? [{ type: "Prep", id }, { type: "Prep", id: "LIST" }]
+          : [{ type: "Prep", id: "LIST" }],
     }),
     getContents: build.query<Envelope<ContentsRecord>, string | void>({
       query: (key) => ({ url: "/contents", params: key ? { key } : undefined }),
@@ -430,6 +488,7 @@ export const {
   useGetPaymentsQuery,
   useGetPaymentQuery,
   useGetPrepRequestsQuery,
+  useGetPrepRequestQuery,
   useUpdatePrepStatusMutation,
   useGetContentsQuery,
   useUpdateContentsMutation,

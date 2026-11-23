@@ -279,29 +279,53 @@ export const mockPayments: PaymentRecord[] = orders.map((order, index) => ({
   order,
 }));
 
+const daysAgo = (days: number) => new Date(Date.now() - days * 86_400_000).toISOString();
+
 export const mockPrep: PrepRecord[] = [
   {
     id: "pr1",
-    serviceType: "Labeling & FBA prep",
+    userId: customers[0].id,
     status: "under_review",
-    notes: "Need poly bagging for 40 units",
-    createdAt: now,
+    attachments: [
+      "/images/product-2.png",
+      "/images/product-3.png",
+      "/uploads/prep/packing-list.pdf",
+    ],
+    adminNote: null,
+    createdAt: daysAgo(2),
+    updatedAt: daysAgo(2),
     user: customers[0],
   },
   {
+    // Resubmitted: back under review with last round's note.
     id: "pr2",
-    serviceType: "Repackaging",
-    status: "correction_required",
-    adminNote: "Upload clearer SKU photos",
-    createdAt: now,
+    userId: customers[2].id,
+    status: "under_review",
+    attachments: ["/images/product-4.png", "/uploads/prep/sku-list.xlsx"],
+    adminNote: "SKU photos are blurry. Please upload clearer ones.",
+    createdAt: daysAgo(6),
+    updatedAt: daysAgo(1),
     user: customers[2],
   },
   {
     id: "pr3",
-    serviceType: "Bundling",
-    status: "completed",
-    createdAt: now,
+    userId: customers[1].id,
+    status: "correction_required",
+    attachments: ["/uploads/prep/shipment.csv"],
+    adminNote: "The CSV is missing quantities for each SKU.",
+    createdAt: daysAgo(4),
+    updatedAt: daysAgo(3),
     user: customers[1],
+  },
+  {
+    id: "pr4",
+    userId: customers[3].id,
+    status: "completed",
+    attachments: ["/images/product-5.png"],
+    adminNote: null,
+    createdAt: daysAgo(10),
+    updatedAt: daysAgo(8),
+    user: customers[3],
   },
 ];
 
@@ -317,7 +341,7 @@ export const mockNotifications: NotificationRecord[] = [
   {
     id: "n2",
     message: "New prep request",
-    description: "A Labeling & FBA prep request is waiting for review.",
+    description: "Sarah Williams submitted files for review.",
     isRead: false,
     createdAt: now,
   },

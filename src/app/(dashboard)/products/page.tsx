@@ -7,8 +7,11 @@ import { Pagination, Table, TableCard, THead } from "@/components/data-table";
 import { IconPlus } from "@/components/icons";
 import { PageHeader } from "@/components/page-header";
 import { StatusPill } from "@/components/status-pill";
-import { DeleteAction, EditAction, TableActions, ViewAction } from "@/components/table-actions";
+import { ConfirmDeleteAction } from "@/components/confirm-delete-action";
+import { EditAction, TableActions, ViewAction } from "@/components/table-actions";
+import { toast } from "@/components/toast";
 import { Toolbar } from "@/components/ui";
+import { apiErrorMessage } from "@/lib/api-error";
 import { money } from "@/lib/format";
 import type { CategoryRecord, ProductRecord } from "@/lib/types";
 import { asList, useDeleteProductMutation, useGetCategoriesQuery, useGetProductsQuery } from "@/store/api";
@@ -29,6 +32,17 @@ export default function ProductsPage() {
   const [remove] = useDeleteProductMutation();
   const list = asList<ProductRecord>(data?.data);
   const categories = asList<CategoryRecord>(categoryRes?.data).items;
+
+  async function handleDelete(product: ProductRecord) {
+    try {
+      const result = await remove(product.id).unwrap();
+      toast.success(result.message || "Product deleted.");
+      // Deleting the only row on a later page would leave that page empty.
+      if (list.items.length === 1 && page > 1) setPage(page - 1);
+    } catch (err) {
+      toast.error(apiErrorMessage(err, "Could not delete the product. Please try again."));
+    }
+  }
 
   return (
     <div>
@@ -114,7 +128,11 @@ export default function ProductsPage() {
                   <TableActions>
                     <ViewAction href={`/products/${product.id}`} />
                     <EditAction href={`/products/${product.id}/edit`} />
-                    <DeleteAction onClick={() => remove(product.id)} />
+                    <ConfirmDeleteAction
+                      title="Delete this product?"
+                      description={`"${product.name}" will be removed from the product list and the storefront.`}
+                      onConfirm={() => handleDelete(product)}
+                    />
                   </TableActions>
                 </td>
               </tr>

@@ -154,7 +154,29 @@ export function mockFallback(args: string | FetchArgs): Envelope<unknown> | null
     };
   }
   if (url.startsWith("/prep-services")) {
-    return { data: { data: mockPrep, meta: { total: mockPrep.length, page: 1, limit: 10 } } };
+    const params =
+      typeof args === "object" && args.params && typeof args.params === "object"
+        ? (args.params as Record<string, string | number | undefined>)
+        : {};
+    let items = [...mockPrep];
+    if (params.status) items = items.filter((item) => item.status === String(params.status));
+    if (params.userId) items = items.filter((item) => item.userId === String(params.userId));
+    if (params.searchTerm) {
+      const term = String(params.searchTerm).toLowerCase();
+      items = items.filter(
+        (item) =>
+          item.user?.name?.toLowerCase().includes(term) ||
+          item.user?.email.toLowerCase().includes(term),
+      );
+    }
+    const limit = Number(params.limit) || 10;
+    const page = Number(params.page) || 1;
+    return {
+      data: {
+        data: items.slice((page - 1) * limit, page * limit),
+        meta: { total: items.length, page, limit },
+      },
+    };
   }
   if (url.startsWith("/contents")) {
     return { data: mockContents, message: "Mock contents" };
