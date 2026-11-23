@@ -1,164 +1,174 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
 import { Pagination, Table, TableCard, THead } from "@/components/data-table";
-import { IconEdit } from "@/components/icons";
 import { PageHeader } from "@/components/page-header";
-import { StatCard } from "@/components/stat-card";
-import { StatusPill } from "@/components/status-pill";
-import { TableActions } from "@/components/table-actions";
-import { Toolbar } from "@/components/ui";
-import { compactNumber, prettyDate } from "@/lib/format";
-import type { PrepRecord } from "@/lib/types";
-import { asList, useGetPrepRequestsQuery, useUpdatePrepStatusMutation } from "@/store/api";
+import { PrepStatusBadge } from "@/components/prep-status-badge";
+import { FilterTabs, Toolbar, TypeChip } from "@/components/ui";
+import { apiErrorMessage } from "@/lib/api-error";
+import { prettyDate, prettyDateTime, timeAgo } from "@/lib/format";
+import { isPrepStatus } from "@/lib/prep";
+import type { PrepRecord, PrepStatus } from "@/lib/types";
+import { asList, useGetPrepRequestsQuery } from "@/store/api";
 
-const statuses = ["under_review", "correction_required", "completed"] as const;
+type Tab = PrepStatus | "all";
+
+const TABS: { id: Tab; label: string; empty: string }[] = [
+  { id: "under_review", label: "Under review", empty: "No requests are waiting for review." },
+  { id: "correction_required", label: "Needs correction", empty: "No requests are waiting on a customer correction." },
+  { id: "completed", label: "Approved", empty: "No approved requests yet." },
+  { id: "all", label: "All", empty: "No prep requests yet." },
+];
+
+const PAGE_SIZE = 10;
+const COLUMNS = ["Customer", "Role", "Files", "Submitted", "Last updated", "Status"];
 
 export default function PrepRequestsPage() {
-  const [search, setSearch] = useState("");
-  const [status, setStatus] = useState("");
-  const [page, setPage] = useState(1);
-  const [openId, setOpenId] = useState<string | null>(null);
-  const { data } = useGetPrepRequestsQuery({ page, limit: 10, status: status || undefined });
-  const totalRes = useGetPrepRequestsQuery({ page: 1, limit: 1 });
-  const pendingRes = useGetPrepRequestsQuery({ page: 1, limit: 1, status: "under_review" });
-  const correctionRes = useGetPrepRequestsQuery({
-    page: 1,
-    limit: 1,
-    status: "correction_required",
-  });
-  const completedRes = useGetPrepRequestsQuery({ page: 1, limit: 1, status: "completed" });
-  const [updateStatus] = useUpdatePrepStatusMutation();
-  const list = asList<PrepRecord>(data?.data);
-  const filtered = useMemo(
-    () =>
-      list.items.filter((item) => {
-        const haystack = `${item.id} ${item.user?.name ?? ""} ${item.serviceType}`.toLowerCase();
-        return haystack.includes(search.toLowerCase());
-      }),
-    [list.items, search],
+  return (
+    <Suspense fallback={<p className="text-sm text-muted">Loading prep requests…</p>}>
+      <PrepRequestsView />
+    </Suspense>
   );
-  const counts = {
-    total: asList(totalRes.data?.data).total,
-    pending: asList(pendingRes.data?.data).total,
-    correction: asList(correctionRes.data?.data).total,
-    completed: asList(completedRes.data?.data).total,
-  };
+}
 
-  function exportCsv() {
-    const rows = [
-      ["Request ID", "Customer", "File Name", "Status", "Date"],
-      ...filtered.map((item) => [
-        `PR-${item.id.slice(-5)}`,
-        item.user?.name ?? "",
-        item.attachments?.[0]?.split("/").pop() || item.serviceType,
-        String(item.status),
-        prettyDate(item.createdAt),
-      ]),
-    ];
-    const blob = new Blob([rows.map((row) => row.join(",")).join("\n")], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = "prep-requests.csv";
-    link.click();
-    URL.revokeObjectURL(url);
-  }
+function usePrepCount(status?: PrepStatus) {
+  const { data } = useGetPrepRequestsQuery(status ? { page: 1, limit: 1, status } : { page: 1, limit: 1 });
+  return data ? asList(data.data).total : undefined;
+}
+
+function PrepRequestsView() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const statusParam = searchParams.get("status");
+  // The tab lives in the URL so notification links can open the "Under review" queue.
+  const tab: Tab = statusParam === "all" || isPrepStatus(statusParam) ? statusParam : "under_review";
+
+  const [search, setSearch] = useState("");
+  const [term, setTerm] = useState("");
+  useEffect(() => {
+    const timer = window.setTimeout(() => setTerm(search.trim()), 300);
+    return () => window.clearTimeout(timer);
+  }, [search]);
+
+  const counts: Record<Tab, number | undefined> = {
+    under_review: usePrepCount("under_review"),
+    correction_required: usePrepCount("correction_required"),
+    completed: usePrepCount("completed"),
+    all: usePrepCount(),
+  };
 
   return (
     <div>
       <PageHeader
-        title="3PL Prep Request List"
-        action={
-          <button
-            type="button"
-            onClick={exportCsv}
-            className="h-11 rounded-full bg-brand px-5 text-sm font-semibold text-white"
-          >
-            Export Report
-          </button>
-        }
+        title="Prep Requests"
+        description="Review the files customers upload for 3PL prep. Approve them or ask for a correction."
       />
-      <div className="mb-5 grid gap-4 md:grid-cols-4">
-        <StatCard label="Total Requests" value={compactNumber(counts.total)} />
-        <StatCard label="Pending" value={compactNumber(counts.pending)} />
-        <StatCard label="Correction Required" value={compactNumber(counts.correction)} />
-        <StatCard label="Completed" value={compactNumber(counts.completed)} />
+      <div className="mb-4">
+        <FilterTabs
+          value={tab}
+          onChange={(id) => router.replace(`/prep-requests?status=${id}`, { scroll: false })}
+          items={TABS.map((item) => ({ id: item.id, label: item.label, count: counts[item.id] }))}
+        />
       </div>
-      <Toolbar search={search} onSearch={setSearch} placeholder="Search by request ID, customer name...">
-        <select
-          value={status}
-          onChange={(event) => {
-            setStatus(event.target.value);
-            setPage(1);
-          }}
-          className="h-11 rounded-full border border-line bg-white px-4 text-sm"
-        >
-          <option value="">All Status</option>
-          {statuses.map((item) => (
-            <option key={item} value={item}>
-              {item.replaceAll("_", " ")}
-            </option>
-          ))}
-        </select>
-        <button
-          type="button"
-          onClick={exportCsv}
-          className="h-11 rounded-full border border-line bg-white px-4 text-sm"
-        >
-          Export
-        </button>
-      </Toolbar>
-      <TableCard footer={<Pagination page={page} total={list.total} limit={10} onPage={setPage} />}>
-        <Table>
-          <THead columns={["Request ID", "Customer", "File Name", "Status", "Date", "Actions"]} />
-          <tbody>
-            {filtered.map((request) => (
-              <tr key={request.id} className="border-t border-line-soft">
-                <td className="px-6 py-4 font-semibold">PR-{request.id.slice(-5)}</td>
-                <td className="px-6 py-4">{request.user?.name ?? "—"}</td>
-                <td className="px-6 py-4 text-muted">
-                  {request.attachments?.[0]?.split("/").pop() || request.serviceType}
-                </td>
-                <td className="px-6 py-4">
-                  <StatusPill value={String(request.status)} />
-                </td>
-                <td className="px-6 py-4">{prettyDate(request.createdAt)}</td>
-                <td className="relative px-6 py-4">
-                  <TableActions>
-                    <button
-                      type="button"
-                      aria-label="Update status"
-                      title="Update status"
-                      onClick={() => setOpenId(openId === request.id ? null : request.id)}
-                      className="inline-flex size-9 items-center justify-center rounded-full text-slate transition hover:bg-[#f4ebde] hover:text-brand"
-                    >
-                      <IconEdit className="size-4" />
-                    </button>
-                  </TableActions>
-                  {openId === request.id ? (
-                    <div className="absolute right-6 z-10 mt-2 w-48 rounded-xl border border-line bg-white p-2 shadow-lg">
-                      {statuses.map((item) => (
-                        <button
-                          key={item}
-                          type="button"
-                          onClick={() => {
-                            updateStatus({ id: request.id, status: item });
-                            setOpenId(null);
-                          }}
-                          className="block w-full rounded-lg px-3 py-2 text-left text-sm capitalize hover:bg-input"
-                        >
-                          Mark {item.replaceAll("_", " ")}
-                        </button>
-                      ))}
-                    </div>
-                  ) : null}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </Table>
-      </TableCard>
+      <Toolbar search={search} onSearch={setSearch} placeholder="Search by customer name or email…" />
+      {/* Keyed so pagination resets whenever the tab or search changes. */}
+      <PrepRequestTable key={`${tab}|${term}`} tab={tab} term={term} />
     </div>
+  );
+}
+
+function PrepRequestTable({ tab, term }: { tab: Tab; term: string }) {
+  const router = useRouter();
+  const [page, setPage] = useState(1);
+  const { data, isLoading, isFetching, error, refetch } = useGetPrepRequestsQuery({
+    page,
+    limit: PAGE_SIZE,
+    ...(tab === "all" ? {} : { status: tab }),
+    // Review queue: longest waiting first.
+    ...(tab === "under_review" ? { sort: "updatedAt" } : {}),
+    ...(term ? { searchTerm: term } : {}),
+  });
+  const list = asList<PrepRecord>(data?.data);
+  const emptyText = term
+    ? `No requests match "${term}".`
+    : TABS.find((item) => item.id === tab)?.empty;
+
+  return (
+    <TableCard
+      footer={
+        list.total > PAGE_SIZE ? (
+          <Pagination page={page} total={list.total} limit={PAGE_SIZE} onPage={setPage} />
+        ) : null
+      }
+    >
+      <Table>
+        <THead columns={COLUMNS} />
+        <tbody className={isFetching && !isLoading ? "opacity-60" : undefined}>
+          {isLoading ? (
+            <MessageRow>Loading prep requests…</MessageRow>
+          ) : error ? (
+            <MessageRow>
+              <span className="text-danger">
+                {apiErrorMessage(error, "Could not load prep requests.")}
+              </span>{" "}
+              <button type="button" onClick={() => refetch()} className="font-semibold text-brand">
+                Try again
+              </button>
+            </MessageRow>
+          ) : list.items.length === 0 ? (
+            <MessageRow>{emptyText}</MessageRow>
+          ) : (
+            list.items.map((request) => {
+              const href = `/prep-requests/${request.id}`;
+              const files = request.attachments?.length ?? 0;
+              return (
+                <tr
+                  key={request.id}
+                  onClick={() => router.push(href)}
+                  className="cursor-pointer border-t border-line-soft hover:bg-input"
+                >
+                  <td className="px-6 py-4">
+                    <Link
+                      href={href}
+                      onClick={(event) => event.stopPropagation()}
+                      className="font-semibold text-ink hover:text-brand"
+                    >
+                      {request.user?.name || "Unnamed customer"}
+                    </Link>
+                    <p className="text-xs text-muted">{request.user?.email ?? "—"}</p>
+                  </td>
+                  <td className="px-6 py-4">
+                    <TypeChip value={request.user?.role} />
+                  </td>
+                  <td className="px-6 py-4 text-slate">
+                    {files} {files === 1 ? "file" : "files"}
+                  </td>
+                  <td className="px-6 py-4 text-slate">{prettyDate(request.createdAt)}</td>
+                  <td className="px-6 py-4 text-slate" title={prettyDateTime(request.updatedAt)}>
+                    {prettyDate(request.updatedAt)}
+                    <p className="text-xs text-muted">{timeAgo(request.updatedAt)}</p>
+                  </td>
+                  <td className="px-6 py-4">
+                    <PrepStatusBadge request={request} />
+                  </td>
+                </tr>
+              );
+            })
+          )}
+        </tbody>
+      </Table>
+    </TableCard>
+  );
+}
+
+function MessageRow({ children }: { children: React.ReactNode }) {
+  return (
+    <tr>
+      <td colSpan={COLUMNS.length} className="px-6 py-10 text-center text-sm text-muted">
+        {children}
+      </td>
+    </tr>
   );
 }

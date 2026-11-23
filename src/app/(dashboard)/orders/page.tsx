@@ -2,12 +2,21 @@
 
 import { useState } from "react";
 import { Pagination, Table, TableCard, THead } from "@/components/data-table";
+import { OrderStatusBadge } from "@/components/order-status-badge";
+import { OrderStatusDialog } from "@/components/order-status-dialog";
 import { PageHeader } from "@/components/page-header";
+import { RowMenu } from "@/components/row-menu";
 import { StatCard } from "@/components/stat-card";
-import { StatusPill } from "@/components/status-pill";
 import { TableActions, ViewAction } from "@/components/table-actions";
 import { FilterTabs, Toolbar, TypeChip } from "@/components/ui";
 import { compactNumber, money, prettyDate } from "@/lib/format";
+import {
+  ORDER_STATUS_LABELS,
+  ORDER_STATUSES,
+  orderActionLabel,
+  orderActions,
+  type OrderAction,
+} from "@/lib/orders";
 import type { OrderRecord } from "@/lib/types";
 import { asList, useGetOrdersQuery, useGetOverviewQuery } from "@/store/api";
 
@@ -16,6 +25,7 @@ export default function OrdersPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [type, setType] = useState("all");
   const [status, setStatus] = useState("");
+  const [pending, setPending] = useState<{ order: OrderRecord; action: OrderAction } | null>(null);
   const { data } = useGetOrdersQuery({
     page,
     limit: 10,
@@ -26,6 +36,10 @@ export default function OrdersPage() {
   const { data: overviewRes } = useGetOverviewQuery();
   const overview = overviewRes?.data;
   const list = asList<OrderRecord>(data?.data);
+  // Keep the dialog on the latest copy of the order; fall back to the snapshot if it left the list.
+  const dialogOrder = pending
+    ? (list.items.find((order) => order.id === pending.order.id) ?? pending.order)
+    : null;
 
   return (
     <div>
@@ -48,10 +62,11 @@ export default function OrdersPage() {
           className="h-11 rounded-full border border-line bg-white px-4 text-sm"
         >
           <option value="">All Status</option>
-          <option value="pending">Pending</option>
-          <option value="processing">Processing</option>
-          <option value="completed">Delivered</option>
-          <option value="cancelled">Cancelled</option>
+          {ORDER_STATUSES.map((item) => (
+            <option key={item} value={item}>
+              {ORDER_STATUS_LABELS[item]}
+            </option>
+          ))}
         </select>
       </Toolbar>
       <div className="mb-4">
@@ -82,11 +97,21 @@ export default function OrdersPage() {
                 <td className="px-6 py-4">{prettyDate(order.createdAt)}</td>
                 <td className="px-6 py-4">{money(order.total)}</td>
                 <td className="px-6 py-4">
-                  <StatusPill value={order.status} />
+                  <OrderStatusBadge status={order.status} />
                 </td>
                 <td className="px-6 py-4">
                   <TableActions>
                     <ViewAction href={`/orders/${order.id}`} />
+                    {orderActions(order).length > 0 ? (
+                      <RowMenu
+                        label={`Change status of order ${order.orderNumber}`}
+                        items={orderActions(order).map((action) => ({
+                          label: orderActionLabel(action, order),
+                          tone: action === "cancel" ? "danger" : "default",
+                          onSelect: () => setPending({ order, action }),
+                        }))}
+                      />
+                    ) : null}
                   </TableActions>
                 </td>
               </tr>
@@ -94,6 +119,15 @@ export default function OrdersPage() {
           </tbody>
         </Table>
       </TableCard>
+
+      {pending && dialogOrder ? (
+        <OrderStatusDialog
+          key={`${pending.order.id}-${pending.action}`}
+          order={dialogOrder}
+          action={pending.action}
+          onClose={() => setPending(null)}
+        />
+      ) : null}
     </div>
   );
 }

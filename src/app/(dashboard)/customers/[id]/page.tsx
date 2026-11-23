@@ -4,6 +4,7 @@ import Image from "next/image";
 import { useParams, useRouter } from "next/navigation";
 import { Table, TableCard, THead } from "@/components/data-table";
 import { PageHeader } from "@/components/page-header";
+import { OrderStatusBadge } from "@/components/order-status-badge";
 import { StatusPill } from "@/components/status-pill";
 import { TableActions, ViewAction } from "@/components/table-actions";
 import { BackLink, TypeChip } from "@/components/ui";
@@ -87,7 +88,7 @@ export default function CustomerDetailsPage() {
                   </td>
                   <td className="px-6 py-4">{money(order.total)}</td>
                   <td className="px-6 py-4">
-                    <StatusPill value={order.status} />
+                    <OrderStatusBadge status={order.status} />
                   </td>
                   <td className="px-6 py-4">
                     <TableActions>

@@ -4,7 +4,8 @@ export type UserStatus = "active" | "blocked";
 
 export type OrderStatus = "pending" | "processing" | "completed" | "cancelled";
 
-export type PaymentStatus = "pending" | "paid" | "failed" | "refunded";
+// Payments spell it "canceled"; orders spell it "cancelled".
+export type PaymentStatus = "pending" | "paid" | "failed" | "refunded" | "canceled";
 
 export type PrepStatus = "under_review" | "correction_required" | "completed";
 
@@ -18,6 +19,12 @@ export interface ApiEnvelope<T> {
     total?: number;
     totalPage?: number;
   };
+}
+
+export interface ApiErrorBody {
+  success: false;
+  message: string;
+  errorSources?: { path: string | number; message: string }[];
 }
 
 export interface AdminUser {
@@ -70,6 +77,7 @@ export interface OrderRecord {
   total: number;
   promoCodeId?: string | null;
   promoCode?: string | null;
+  notes?: string | null;
   createdAt: string;
   user?: AdminUser;
   items?: OrderItemRecord[];
@@ -199,15 +207,20 @@ export interface PaymentRecord {
   order?: OrderRecord;
 }
 
+/** Statuses an admin can set when reviewing a request that is `under_review`. */
+export type PrepReviewStatus = Extract<PrepStatus, "completed" | "correction_required">;
+
 export interface PrepRecord {
   id: string;
-  serviceType: string;
-  status: PrepStatus | string;
-  notes?: string | null;
-  adminNote?: string | null;
-  attachments?: string[];
+  userId: string;
+  status: PrepStatus;
+  /** File URLs. A resubmission replaces the whole set. */
+  attachments: string[];
+  /** Last note sent to the customer. Non-null on an `under_review` request means it was resubmitted. */
+  adminNote: string | null;
   createdAt: string;
-  user?: AdminUser;
+  updatedAt: string;
+  user?: Pick<AdminUser, "id" | "name" | "email" | "role" | "phoneNumber" | "profile">;
 }
 
 export interface ContentsRecord {

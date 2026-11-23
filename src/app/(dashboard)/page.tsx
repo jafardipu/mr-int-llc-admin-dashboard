@@ -5,7 +5,7 @@ import { useState } from "react";
 import { DonutChart, RevenueBars } from "@/components/charts";
 import { PageHeader } from "@/components/page-header";
 import { StatCard } from "@/components/stat-card";
-import { StatusPill } from "@/components/status-pill";
+import { OrderStatusBadge } from "@/components/order-status-badge";
 import { TypeChip } from "@/components/ui";
 import { Table, TableCard, THead } from "@/components/data-table";
 import { compactNumber, money, timeAgo } from "@/lib/format";
@@ -87,7 +87,7 @@ export default function DashboardPage() {
                     <TypeChip value={order.customerType} />
                   </td>
                   <td className="px-6 py-4">
-                    <StatusPill value={order.status} />
+                    <OrderStatusBadge status={order.status} />
                   </td>
                   <td className="px-6 py-4">{money(order.total)}</td>
                 </tr>

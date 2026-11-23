@@ -15,6 +15,7 @@ const styles: Record<string, string> = {
   failed: "bg-danger-bg text-danger",
   inactive: "bg-[#f1f5f9] text-slate",
   refunded: "bg-[#f1f5f9] text-slate",
+  canceled: "bg-[#f1f5f9] text-slate",
 };
 
 const labels: Record<string, string> = {
@@ -24,7 +25,7 @@ const labels: Record<string, string> = {
   correction_required: "Correction Required",
 };
 
-export function StatusPill({ value }: { value?: string | null }) {
+export function StatusPill({ value, label }: { value?: string | null; label?: string }) {
   const key = (value ?? "pending").toLowerCase();
   return (
     <span
@@ -32,7 +33,9 @@ export function StatusPill({ value }: { value?: string | null }) {
         styles[key] ?? "bg-[#f1f5f9] text-slate"
       }`}
     >
-      {labels[key] ?? key.replaceAll("_", " ").replace(/\b\w/g, (char) => char.toUpperCase())}
+      {label ??
+        labels[key] ??
+        key.replaceAll("_", " ").replace(/\b\w/g, (char) => char.toUpperCase())}
     </span>
   );
 }
