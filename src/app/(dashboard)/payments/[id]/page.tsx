@@ -68,7 +68,7 @@ export default function PaymentDetailsPage() {
               <div key={item.id} className="flex items-center justify-between gap-4">
                 <div className="flex items-center gap-3">
                   <Image
-                    src={item.product?.images?.[0]?.url || "/images/product-headphones.png"}
+                    src={item.product?.images?.[0]?.url as string || ""}
                     alt=""
                     width={48}
                     height={48}

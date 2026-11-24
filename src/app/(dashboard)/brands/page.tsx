@@ -71,7 +71,7 @@ export default function BrandsPage() {
               <tr key={brand.id} className="border-t border-line-soft">
                 <td className="px-6 py-4">
                   <Image
-                    src={brand.image || "/images/product-headphones.png"}
+                    src={brand.image || ""}
                     alt=""
                     width={44}
                     height={44}

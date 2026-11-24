@@ -83,8 +83,7 @@ export default function DealsPage() {
                   <div className="flex items-center gap-3">
                     <Image
                       src={
-                        deal.product?.images?.[0]?.url ||
-                        "/images/product-headphones.png"
+                        deal.product?.images?.[0]?.url || ""
                       }
                       alt=""
                       width={44}

@@ -33,11 +33,11 @@ export default function CategoryDetailsPage() {
       <section className="mb-6 rounded-2xl bg-white p-6">
         <div className="flex flex-wrap items-start gap-5">
           <Image
-            src={category?.image || "/images/product-headphones.png"}
+            src={category?.image || ""}
             alt=""
             width={120}
             height={120}
-            className="size-[120px] rounded-2xl object-cover"
+            className="size-30 rounded-2xl object-cover"
           />
           <div>
             <div className="flex flex-wrap items-center gap-3">
@@ -58,7 +58,7 @@ export default function CategoryDetailsPage() {
           products.map((product) => (
             <Link key={product.id} href={`/products/${product.id}`} className="rounded-2xl bg-white p-4 hover:shadow-sm">
               <Image
-                src={product.images?.[0]?.url || "/images/product-headphones.png"}
+                src={product.images?.[0]?.url || ""}
                 alt=""
                 width={280}
                 height={180}

@@ -169,7 +169,7 @@ export default function OrderDetailsPage() {
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
                       <Image
-                        src={item.product?.images?.[0]?.url || "/images/product-headphones.png"}
+                        src={item.product?.images?.[0]?.url as string}
                         alt=""
                         width={44}
                         height={44}

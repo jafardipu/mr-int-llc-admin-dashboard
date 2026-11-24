@@ -68,7 +68,7 @@ export default function CategoriesPage() {
               <tr key={category.id} className="border-t border-line-soft">
                 <td className="px-6 py-4">
                   <Image
-                    src={category.image || "/images/product-headphones.png"}
+                    src={category.image || ""}
                     alt=""
                     width={44}
                     height={44}

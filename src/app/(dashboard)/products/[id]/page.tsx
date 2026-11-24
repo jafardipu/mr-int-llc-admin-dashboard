@@ -38,7 +38,7 @@ export default function ProductDetailsPage() {
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="rounded-2xl bg-white p-4">
               <Image
-                src={cover || "/images/product-headphones.png"}
+                src={cover}
                 alt=""
                 width={480}
                 height={480}

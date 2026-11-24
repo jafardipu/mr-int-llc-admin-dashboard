@@ -81,7 +81,7 @@ export default function CarouselPage() {
               <tr key={banner.id} className="border-t border-line-soft">
                 <td className="px-6 py-4">
                   <Image
-                    src={banner.image || "/images/product-headphones.png"}
+                    src={banner.image}
                     alt=""
                     width={120}
                     height={48}

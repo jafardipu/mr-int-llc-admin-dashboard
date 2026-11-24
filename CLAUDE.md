@@ -82,6 +82,11 @@ When the user keeps an existing image, its URL goes in the JSON payload instead 
 ### Page and form patterns
 - **List pages** (`(dashboard)/<resource>/page.tsx`) are built from `PageHeader`, `Toolbar`/`FilterTabs` ([src/components/ui.tsx](src/components/ui.tsx)), `TableCard`/`Table`/`THead`/`Pagination` ([src/components/data-table.tsx](src/components/data-table.tsx)) and `TableActions`. Several of them fetch with a large `limit` and do search and pagination client-side.
 - **Forms** are `src/components/<entity>-form.tsx`. Each takes an optional `id` (edit mode: it fetches with `{ skip: !id }` and fills state in a `useEffect`) and an `onDone` callback. They are rendered inside the `Modal` from `ui.tsx` or on full pages (products).
+- **Form validation (products):** [src/lib/product-schema.ts](src/lib/product-schema.ts) is a Zod schema mirroring the backend's `product.validation.ts`, plus a few stricter checks. Keep the two in sync.
+  - Its parsed output is the JSON payload that gets sent.
+  - A field's message appears under it once the field is blurred or after the first submit.
+  - Backend validation errors, a duplicate SKU (409) and a missing brand or category (404) are mapped onto fields with `apiFieldErrors` from `api-error.ts`.
+  - The other forms still rely on native `required` attributes.
 - **Terms and privacy** pages share `ContentSettings`, keyed by the `field` prop (`termsAndCondition` / `privacyPolicy`).
 - **Toasts:** `toast.success()` / `toast.error()` from [src/components/toast.tsx](src/components/toast.tsx). The `<Toaster />` is mounted in `AdminShell`.
 - **Delete confirmation:** `ConfirmDeleteAction` ([src/components/confirm-delete-action.tsx](src/components/confirm-delete-action.tsx)) wraps a delete button in an antd Popconfirm. Keep antd imports out of `table-actions.tsx`: every list page imports that file, so antd would be added to all of them.

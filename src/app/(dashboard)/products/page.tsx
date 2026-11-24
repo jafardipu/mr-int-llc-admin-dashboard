@@ -99,7 +99,7 @@ export default function ProductsPage() {
               <tr key={product.id} className="border-t border-line-soft">
                 <td className="px-6 py-3">
                   <Image
-                    src={product.images?.[0]?.url || "/images/product-headphones.png"}
+                    src={product.images?.[0]?.url as string}
                     alt=""
                     width={44}
                     height={44}

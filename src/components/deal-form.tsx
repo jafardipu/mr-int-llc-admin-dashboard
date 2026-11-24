@@ -30,7 +30,7 @@ function toIsoDateTime(value?: string | null, endOfDay = false) {
 }
 
 function productCover(product?: ProductRecord | null) {
-  return product?.images?.[0]?.url || "/images/product-headphones.png";
+  return product?.images?.[0]?.url;
 }
 
 const empty = {
