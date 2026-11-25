@@ -2,6 +2,7 @@
 
 import { AuthGuard } from "./auth-guard";
 import { Sidebar } from "./sidebar";
+import { Toaster } from "./toast";
 import { Topbar } from "./topbar";
 
 export function AdminShell({ children }: { children: React.ReactNode }) {
@@ -14,6 +15,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
           <main className="px-8 pb-10">{children}</main>
         </div>
       </div>
+      <Toaster />
     </AuthGuard>
   );
 }

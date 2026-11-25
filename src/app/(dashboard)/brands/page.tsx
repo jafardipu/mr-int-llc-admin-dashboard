@@ -10,6 +10,7 @@ import { DeleteAction, EditAction, TableActions } from "@/components/table-actio
 import { Modal, Toolbar } from "@/components/ui";
 import { prettyDate } from "@/lib/format";
 import type { BrandRecord } from "@/lib/types";
+
 import { asList, useDeleteBrandMutation, useGetBrandsQuery } from "@/store/api";
 
 export default function BrandsPage() {
@@ -70,7 +71,7 @@ export default function BrandsPage() {
               <tr key={brand.id} className="border-t border-line-soft">
                 <td className="px-6 py-4">
                   <Image
-                    src={brand.image || "/images/product-headphones.png"}
+                    src={brand.image || ""}
                     alt=""
                     width={44}
                     height={44}

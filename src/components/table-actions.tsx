@@ -16,7 +16,7 @@ const toneClass = {
   success: "text-success hover:bg-[#e8f6ee]",
 } as const;
 
-function actionClass(tone: keyof typeof toneClass = "slate") {
+export function actionClass(tone: keyof typeof toneClass = "slate") {
   return `inline-flex size-9 items-center justify-center rounded-full transition ${toneClass[tone]}`;
 }
 
@@ -59,6 +59,7 @@ export function EditAction({
   );
 }
 
+/** Deletes immediately. To ask first, use ConfirmDeleteAction (confirm-delete-action.tsx). */
 export function DeleteAction({ onClick }: { onClick: () => void }) {
   return (
     <button

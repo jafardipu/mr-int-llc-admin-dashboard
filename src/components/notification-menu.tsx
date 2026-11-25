@@ -3,16 +3,21 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { notificationHref, timeAgo } from "@/lib/format";
+import { isPrepNotification } from "@/lib/prep";
 import type { NotificationRecord } from "@/lib/types";
 import {
+  api,
   asList,
   useGetNotificationsQuery,
   useReadNotificationsMutation,
 } from "@/store/api";
+import { useAppDispatch } from "@/store/hooks";
 import { IconBell } from "./icons";
 
 export function NotificationMenu() {
   const panelRef = useRef<HTMLDivElement>(null);
+  const seenIds = useRef<Set<string> | null>(null);
+  const dispatch = useAppDispatch();
   const [open, setOpen] = useState(false);
   const { data, refetch } = useGetNotificationsQuery(undefined, {
     pollingInterval: 30000,
@@ -20,6 +25,18 @@ export function NotificationMenu() {
   const [readNotifications] = useReadNotificationsMutation();
   const items = asList<NotificationRecord>(data?.data).items;
   const unread = items.filter((item) => !item.isRead).length;
+
+  // When a new prep notification arrives, refresh the prep request lists.
+  useEffect(() => {
+    if (!data) return;
+    const current = asList<NotificationRecord>(data.data).items;
+    const seen = seenIds.current;
+    seenIds.current = new Set(current.map((item) => item.id));
+    if (!seen) return; // first load: nothing has "arrived" yet
+    if (current.some((item) => !seen.has(item.id) && isPrepNotification(item))) {
+      dispatch(api.util.invalidateTags([{ type: "Prep", id: "LIST" }]));
+    }
+  }, [data, dispatch]);
 
   useEffect(() => {
     if (!open) return;

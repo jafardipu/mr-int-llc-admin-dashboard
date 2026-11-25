@@ -117,6 +117,14 @@ export function IconPromo(props: IconProps) {
   );
 }
 
+export function IconDeal(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <path d="M12 3v18M5 8h10a3 3 0 0 1 0 6H7a3 3 0 0 0 0 6h12" />
+    </svg>
+  );
+}
+
 export function IconFaq(props: IconProps) {
   return (
     <svg {...base(props)}>
@@ -236,6 +244,27 @@ export function IconDots(props: IconProps) {
       <circle cx="6" cy="12" r="1.6" />
       <circle cx="12" cy="12" r="1.6" />
       <circle cx="18" cy="12" r="1.6" />
+    </svg>
+  );
+}
+
+export function IconGrip(props: IconProps) {
+  return (
+    <svg {...base({ ...props, fill: "currentColor", stroke: "none" })}>
+      <circle cx="9" cy="6" r="1.5" />
+      <circle cx="15" cy="6" r="1.5" />
+      <circle cx="9" cy="12" r="1.5" />
+      <circle cx="15" cy="12" r="1.5" />
+      <circle cx="9" cy="18" r="1.5" />
+      <circle cx="15" cy="18" r="1.5" />
+    </svg>
+  );
+}
+
+export function IconDownload(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <path d="M12 4v11M7 10l5 5 5-5M5 20h14" />
     </svg>
   );
 }

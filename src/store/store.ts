@@ -1,6 +1,16 @@
-import { configureStore } from "@reduxjs/toolkit";
+import { configureStore, createListenerMiddleware } from "@reduxjs/toolkit";
 import { api } from "./api";
-import { authSlice } from "./authSlice";
+import { authSlice, logout } from "./authSlice";
+
+// Any logout (sign-out button, expired session, another tab) also drops every cached response, so
+// no customer or order data stays in memory for the next login.
+const logoutListener = createListenerMiddleware();
+logoutListener.startListening({
+  actionCreator: logout,
+  effect: (_action, listenerApi) => {
+    listenerApi.dispatch(api.util.resetApiState());
+  },
+});
 
 export const store = configureStore({
   reducer: {
@@ -8,7 +18,7 @@ export const store = configureStore({
     [api.reducerPath]: api.reducer,
   },
   middleware: (getDefaultMiddleware) =>
-    getDefaultMiddleware().concat(api.middleware),
+    getDefaultMiddleware().prepend(logoutListener.middleware).concat(api.middleware),
 });
 
 export type RootState = ReturnType<typeof store.getState>;

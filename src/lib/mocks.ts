@@ -4,6 +4,7 @@ import type {
   BrandRecord,
   CategoryRecord,
   ContentsRecord,
+  DealRecord,
   FaqRecord,
   SupportMessageRecord,
   NotificationRecord,
@@ -35,6 +36,7 @@ const customers: AdminUser[] = [
     status: "active",
     profile: "/images/avatar-profile.png",
     createdAt: "2025-01-12T10:00:00.000Z",
+    wholesaleFee: { status: "paid", amount: 20, paidAt: "2025-01-12T10:30:00.000Z" },
   },
   {
     id: "c2",
@@ -51,6 +53,7 @@ const customers: AdminUser[] = [
     role: "wholesale",
     status: "active",
     createdAt: "2025-03-18T10:00:00.000Z",
+    wholesaleFee: { status: "pending", amount: 20, paidAt: null },
   },
   {
     id: "c4",
@@ -67,6 +70,7 @@ const customers: AdminUser[] = [
     role: "wholesale",
     status: "active",
     createdAt: "2025-04-21T10:00:00.000Z",
+    wholesaleFee: null,
   },
 ];
 
@@ -79,6 +83,7 @@ const products: ProductRecord[] = [
     wholesalePrice: 84,
     stock: 140,
     status: "active",
+    isFeatured: true,
     category: { id: "cat1", name: "Electronics" },
     images: [{ id: "i1", url: "/images/product-headphones.png", isPrimary: true }],
   },
@@ -90,6 +95,7 @@ const products: ProductRecord[] = [
     wholesalePrice: 168,
     stock: 62,
     status: "active",
+    isFeatured: true,
     category: { id: "cat1", name: "Electronics" },
     images: [{ id: "i2", url: "/images/product-2.png", isPrimary: true }],
   },
@@ -101,6 +107,7 @@ const products: ProductRecord[] = [
     wholesalePrice: 132,
     stock: 18,
     status: "active",
+    isFeatured: false,
     category: { id: "cat2", name: "Wearables" },
     images: [{ id: "i3", url: "/images/product-3.png", isPrimary: true }],
   },
@@ -112,6 +119,7 @@ const products: ProductRecord[] = [
     wholesalePrice: 49,
     stock: 0,
     status: "inactive",
+    isFeatured: false,
     category: { id: "cat3", name: "Accessories" },
     images: [{ id: "i4", url: "/images/product-4.png", isPrimary: true }],
   },
@@ -123,6 +131,7 @@ const products: ProductRecord[] = [
     wholesalePrice: 29,
     stock: 210,
     status: "active",
+    isFeatured: false,
     category: { id: "cat3", name: "Accessories" },
     images: [{ id: "i5", url: "/images/product-5.png", isPrimary: true }],
   },
@@ -273,29 +282,53 @@ export const mockPayments: PaymentRecord[] = orders.map((order, index) => ({
   order,
 }));
 
+const daysAgo = (days: number) => new Date(Date.now() - days * 86_400_000).toISOString();
+
 export const mockPrep: PrepRecord[] = [
   {
     id: "pr1",
-    serviceType: "Labeling & FBA prep",
+    userId: customers[0].id,
     status: "under_review",
-    notes: "Need poly bagging for 40 units",
-    createdAt: now,
+    attachments: [
+      "/images/product-2.png",
+      "/images/product-3.png",
+      "/uploads/prep/packing-list.pdf",
+    ],
+    adminNote: null,
+    createdAt: daysAgo(2),
+    updatedAt: daysAgo(2),
     user: customers[0],
   },
   {
+    // Resubmitted: back under review with last round's note.
     id: "pr2",
-    serviceType: "Repackaging",
-    status: "correction_required",
-    adminNote: "Upload clearer SKU photos",
-    createdAt: now,
+    userId: customers[2].id,
+    status: "under_review",
+    attachments: ["/images/product-4.png", "/uploads/prep/sku-list.xlsx"],
+    adminNote: "SKU photos are blurry. Please upload clearer ones.",
+    createdAt: daysAgo(6),
+    updatedAt: daysAgo(1),
     user: customers[2],
   },
   {
     id: "pr3",
-    serviceType: "Bundling",
-    status: "completed",
-    createdAt: now,
+    userId: customers[1].id,
+    status: "correction_required",
+    attachments: ["/uploads/prep/shipment.csv"],
+    adminNote: "The CSV is missing quantities for each SKU.",
+    createdAt: daysAgo(4),
+    updatedAt: daysAgo(3),
     user: customers[1],
+  },
+  {
+    id: "pr4",
+    userId: customers[3].id,
+    status: "completed",
+    attachments: ["/images/product-5.png"],
+    adminNote: null,
+    createdAt: daysAgo(10),
+    updatedAt: daysAgo(8),
+    user: customers[3],
   },
 ];
 
@@ -311,7 +344,7 @@ export const mockNotifications: NotificationRecord[] = [
   {
     id: "n2",
     message: "New prep request",
-    description: "A Labeling & FBA prep request is waiting for review.",
+    description: "Sarah Williams submitted files for review.",
     isRead: false,
     createdAt: now,
   },
@@ -344,6 +377,43 @@ export const mockSupportMessages: SupportMessageRecord[] = [
     status: "replied",
     reply: "Please use Forgot Password and check spam for the OTP email.",
     repliedAt: now,
+    createdAt: now,
+  },
+];
+
+export const mockDeals: DealRecord[] = [
+  {
+    id: "deal1",
+    productId: "p1",
+    dealPrice: 89,
+    type: "weekly",
+    startDate: now,
+    endDate: now,
+    isActive: true,
+    product: {
+      id: "p1",
+      name: "Wireless Headphones",
+      sku: "MR-HP-001",
+      retailPrice: 120,
+      images: [{ id: "i1", url: "/images/product-headphones.png", isPrimary: true }],
+    },
+    createdAt: now,
+  },
+  {
+    id: "deal2",
+    productId: "p5",
+    dealPrice: 24,
+    type: "clearance",
+    startDate: now,
+    endDate: null,
+    isActive: true,
+    product: {
+      id: "p5",
+      name: "Desk Lamp",
+      sku: "MR-LM-011",
+      retailPrice: 46,
+      images: [{ id: "i5", url: "/images/product-5.png", isPrimary: true }],
+    },
     createdAt: now,
   },
 ];
@@ -387,37 +457,47 @@ export const mockFaqs: FaqRecord[] = [
     id: "faq1",
     question: "How does wholesale pricing work?",
     answer: "Wholesale prices unlock automatically when your account has the wholesale role and minimum quantities are met.",
-    categoryId: "cat1",
-    category: { id: "cat1", name: "Electronics" },
+    order: 1,
     createdAt: now,
+    updatedAt: now,
   },
   {
     id: "faq2",
     question: "Can I track my order status?",
-    answer: "Yes. Open your orders page to see payment confirmation, processing, shipping, and delivery updates.",
+    answer: "Yes. Open your orders page to see payment confirmation, processing, shipping, and delivery updates.\nYou also get an email at each step.",
+    order: 2,
     createdAt: now,
+    updatedAt: now,
   },
 ];
 
 export const mockBanners: BannerRecord[] = [
   {
     id: "banner1",
-    title: "Wholesale Ready Inventory",
-    subtitle: "Retail and wholesale pricing on every product.",
     image: "https://placehold.co/1400x500?text=MR+International",
-    link: "/products",
-    position: 1,
+    targetType: "product",
+    productId: "p1",
+    product: { id: "p1", name: "Wireless Headphones", sku: "MR-HP-001", retailPrice: 120, status: "active", images: [] },
+    discountPercent: 20,
+    startDate: new Date(Date.now() - 2 * 86_400_000).toISOString().slice(0, 10) + "T00:00:00.000Z",
+    endDate: new Date(Date.now() + 5 * 86_400_000).toISOString().slice(0, 10) + "T23:59:59.999Z",
     isActive: true,
     createdAt: now,
   },
   {
     id: "banner2",
-    title: "Seasonal Deals",
-    subtitle: "Limited-time offers for retail shoppers.",
     image: "https://placehold.co/1400x500?text=Seasonal+Deals",
-    link: "/products?deal=true",
-    position: 2,
+    targetType: "category",
+    categoryId: "cat1",
+    category: { id: "cat1", name: "Electronics", status: "active", _count: { products: 80 } },
     isActive: true,
+    createdAt: now,
+  },
+  {
+    id: "banner3",
+    image: "https://placehold.co/1400x500?text=Old+banner",
+    link: "/products?deal=true",
+    isActive: false,
     createdAt: now,
   },
 ];
@@ -428,4 +508,5 @@ export const mockContents: ContentsRecord = {
     "These Terms & Conditions govern use of the MR International LLC wholesale and retail platform.",
   privacyPolicy:
     "MR International LLC collects account, order, and payment information only to fulfill purchases and support.",
+  prices: { shippingFee: 10, taxRate: 0, wholesaleAccountFee: 20 },
 };

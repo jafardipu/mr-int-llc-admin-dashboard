@@ -4,7 +4,8 @@ export type UserStatus = "active" | "blocked";
 
 export type OrderStatus = "pending" | "processing" | "completed" | "cancelled";
 
-export type PaymentStatus = "pending" | "paid" | "failed" | "refunded";
+// Payments spell it "canceled"; orders spell it "cancelled".
+export type PaymentStatus = "pending" | "paid" | "failed" | "refunded" | "canceled";
 
 export type PrepStatus = "under_review" | "correction_required" | "completed";
 
@@ -20,6 +21,12 @@ export interface ApiEnvelope<T> {
   };
 }
 
+export interface ApiErrorBody {
+  success: false;
+  message: string;
+  errorSources?: { path: string | number; message: string }[];
+}
+
 export interface AdminUser {
   id: string;
   name?: string | null;
@@ -31,6 +38,8 @@ export interface AdminUser {
   isVerified?: boolean;
   createdAt?: string;
   orders?: OrderRecord[];
+  /** One-time wholesale account fee; null when the account never needed to pay one. */
+  wholesaleFee?: { status: PaymentStatus | string; amount: number; paidAt: string | null } | null;
 }
 
 export interface AuthPayload {
@@ -70,6 +79,7 @@ export interface OrderRecord {
   total: number;
   promoCodeId?: string | null;
   promoCode?: string | null;
+  notes?: string | null;
   createdAt: string;
   user?: AdminUser;
   items?: OrderItemRecord[];
@@ -99,6 +109,27 @@ export interface PromoCodeRecord {
   expiresAt?: string | null;
   isActive?: boolean;
   customerType?: "retail" | "wholesale" | null;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export type DealType = "weekly" | "clearance";
+
+export interface DealRecord {
+  id: string;
+  productId: string;
+  dealPrice: number;
+  type: DealType;
+  startDate?: string | null;
+  endDate?: string | null;
+  isActive?: boolean;
+  product?: {
+    id: string;
+    name: string;
+    sku?: string;
+    retailPrice?: number;
+    images?: { id?: string; url: string; isPrimary?: boolean }[];
+  };
   createdAt?: string;
   updatedAt?: string;
 }
@@ -133,11 +164,11 @@ export interface ProductRecord {
   status?: string;
   brandId?: string;
   categoryId?: string;
-  subcategory?: string | null;
   asin?: string | null;
   amazonUrl?: string | null;
   walmartUrl?: string | null;
   volumeTiers?: VolumeTier[] | null;
+  isFeatured?: boolean;
   isDeal?: boolean;
   dealPrice?: number | null;
   avgRating?: number;
@@ -178,15 +209,27 @@ export interface PaymentRecord {
   order?: OrderRecord;
 }
 
+/** Statuses an admin can set when reviewing a request that is `under_review`. */
+export type PrepReviewStatus = Extract<PrepStatus, "completed" | "correction_required">;
+
 export interface PrepRecord {
   id: string;
-  serviceType: string;
-  status: PrepStatus | string;
-  notes?: string | null;
-  adminNote?: string | null;
-  attachments?: string[];
+  userId: string;
+  status: PrepStatus;
+  /** File URLs. A resubmission replaces the whole set. */
+  attachments: string[];
+  /** Last note sent to the customer. Non-null on an `under_review` request means it was resubmitted. */
+  adminNote: string | null;
   createdAt: string;
-  user?: AdminUser;
+  updatedAt: string;
+  user?: Pick<AdminUser, "id" | "name" | "email" | "role" | "phoneNumber" | "profile">;
+}
+
+/** Admin-set store prices, kept on the contents record. Amounts in USD, `taxRate` in %. */
+export interface StorePrices {
+  shippingFee: number;
+  taxRate: number;
+  wholesaleAccountFee: number;
 }
 
 export interface ContentsRecord {
@@ -194,27 +237,38 @@ export interface ContentsRecord {
   termsAndCondition?: string;
   privacyPolicy?: string;
   aboutUs?: string;
+  prices?: StorePrices;
 }
+
+export type BannerTarget = "product" | "category";
 
 export interface BannerRecord {
   id: string;
-  title: string;
   image: string;
-  subtitle?: string | null;
+  /** Where the banner sends shoppers. Null only on banners made before targets existed. */
+  targetType?: BannerTarget | null;
+  productId?: string | null;
+  categoryId?: string | null;
+  product?: Pick<ProductRecord, "id" | "name" | "sku" | "images" | "status" | "retailPrice"> | null;
+  category?: (Pick<CategoryRecord, "id" | "name" | "status"> & { _count?: { products?: number } }) | null;
+  /** Optional % off the target's products while `startDate` ≤ now ≤ `endDate`. */
+  discountPercent?: number | null;
+  startDate?: string | null;
+  endDate?: string | null;
+  /** Legacy free-text link, replaced by the target. */
   link?: string | null;
-  position?: number;
   isActive?: boolean;
   isDeleted?: boolean;
   createdAt?: string;
   updatedAt?: string;
 }
 
+/** Site-wide FAQ. `order` sets the display position (lowest first) and can have gaps (1, 2, 4). */
 export interface FaqRecord {
   id: string;
   question: string;
   answer: string;
-  categoryId?: string | null;
-  category?: { id: string; name: string } | null;
+  order: number;
   createdAt?: string;
   updatedAt?: string;
 }

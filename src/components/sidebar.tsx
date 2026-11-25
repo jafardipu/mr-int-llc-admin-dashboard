@@ -13,6 +13,7 @@ import {
   IconCart,
   IconChevron,
   IconDashboard,
+  IconDeal,
   IconFaq,
   IconList,
   IconOrders,
@@ -31,6 +32,7 @@ const nav = [
   { href: "/categories", label: "Categories", icon: IconList },
   { href: "/brands", label: "Brands", icon: IconBrand },
   { href: "/carousel", label: "Carousel", icon: IconCarousel },
+  { href: "/deals", label: "Deals", icon: IconDeal },
   { href: "/faqs", label: "FAQs", icon: IconFaq },
   { href: "/promo-codes", label: "Promo Codes", icon: IconPromo },
   { href: "/support", label: "Support", icon: IconSupport },
@@ -41,6 +43,7 @@ const nav = [
 
 const settings = [
   { href: "/settings/profile", label: "Edit Profile" },
+  { href: "/settings/pricing", label: "Pricing" },
   { href: "/settings/terms", label: "Terms & Conditions" },
   { href: "/settings/privacy", label: "Privacy Policy" },
 ];

@@ -1,3 +1,5 @@
+import { isPrepNotification, PREP_QUEUE_HREF } from "./prep";
+
 export function money(value?: number | null) {
   return new Intl.NumberFormat("en-US", {
     style: "currency",
@@ -72,6 +74,9 @@ export function mediaUrl(url?: string | null, fallback = "/images/avatar-admin.p
 
 export function notificationHref(item: { orderId?: string | null; message?: string | null }) {
   if (item.orderId) return `/orders/${item.orderId}`;
-  if (/prep/i.test(item.message ?? "")) return "/prep-requests";
+  // Prep notifications carry no request id, so they open the review queue.
+  if (isPrepNotification(item)) return PREP_QUEUE_HREF;
+  // Sent when a wholesale account pays its one-time fee; it carries no user id.
+  if (item.message?.trim().toLowerCase() === "new wholesale account") return "/customers";
   return "/notifications";
 }

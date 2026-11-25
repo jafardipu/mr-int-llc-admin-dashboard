@@ -12,6 +12,7 @@ import {
   mockOverview,
   mockPayments,
   mockPrep,
+  mockDeals,
   mockProducts,
   mockPromoCodes,
   mockUser,
@@ -153,7 +154,29 @@ export function mockFallback(args: string | FetchArgs): Envelope<unknown> | null
     };
   }
   if (url.startsWith("/prep-services")) {
-    return { data: { data: mockPrep, meta: { total: mockPrep.length, page: 1, limit: 10 } } };
+    const params =
+      typeof args === "object" && args.params && typeof args.params === "object"
+        ? (args.params as Record<string, string | number | undefined>)
+        : {};
+    let items = [...mockPrep];
+    if (params.status) items = items.filter((item) => item.status === String(params.status));
+    if (params.userId) items = items.filter((item) => item.userId === String(params.userId));
+    if (params.searchTerm) {
+      const term = String(params.searchTerm).toLowerCase();
+      items = items.filter(
+        (item) =>
+          item.user?.name?.toLowerCase().includes(term) ||
+          item.user?.email.toLowerCase().includes(term),
+      );
+    }
+    const limit = Number(params.limit) || 10;
+    const page = Number(params.page) || 1;
+    return {
+      data: {
+        data: items.slice((page - 1) * limit, page * limit),
+        meta: { total: items.length, page, limit },
+      },
+    };
   }
   if (url.startsWith("/contents")) {
     return { data: mockContents, message: "Mock contents" };
@@ -189,16 +212,10 @@ export function mockFallback(args: string | FetchArgs): Envelope<unknown> | null
       message: "Mock support messages",
     };
   }
-  if (url.startsWith("/faq/") && url !== "/faq") {
-    const id = url.replace("/faq/", "");
-    return {
-      data: mockFaqs.find((item) => item.id === id) ?? mockFaqs[0],
-      message: "Mock faq",
-    };
-  }
   if (url.startsWith("/faq")) {
+    const items = [...mockFaqs].sort((a, b) => a.order - b.order);
     return {
-      data: { data: mockFaqs, meta: { total: mockFaqs.length, page: 1, limit: 100 } },
+      data: { data: items, meta: { total: items.length, page: 1, limit: 500 } },
       message: "Mock faqs",
     };
   }
@@ -218,8 +235,45 @@ export function mockFallback(args: string | FetchArgs): Envelope<unknown> | null
       message: "Mock promo codes",
     };
   }
+  if (url.startsWith("/deals/weekly")) {
+    const weekly = mockDeals.filter((item) => item.type === "weekly");
+    return {
+      data: { data: weekly, meta: { total: weekly.length, page: 1, limit: 20 } },
+      message: "Mock weekly deals",
+    };
+  }
+  if (url.startsWith("/deals/clearance")) {
+    const clearance = mockDeals.filter((item) => item.type === "clearance");
+    return {
+      data: { data: clearance, meta: { total: clearance.length, page: 1, limit: 20 } },
+      message: "Mock clearance deals",
+    };
+  }
+  if (url.startsWith("/deals/") && url !== "/deals") {
+    const id = url.replace("/deals/", "").split("?")[0];
+    return {
+      data: mockDeals.find((item) => item.id === id) ?? mockDeals[0],
+      message: "Mock deal",
+    };
+  }
+  if (url.startsWith("/deals")) {
+    return {
+      data: {
+        data: mockDeals,
+        meta: { total: mockDeals.length, page: 1, limit: 20 },
+      },
+      message: "Mock deals",
+    };
+  }
+  if (url.startsWith("/banners/homepage")) {
+    const active = mockBanners.filter((item) => item.isActive !== false && !item.isDeleted);
+    return {
+      data: { data: active, meta: { total: active.length, page: 1, limit: 20 } },
+      message: "Homepage banners fetched successfully",
+    };
+  }
   if (url.startsWith("/banners/") && url !== "/banners") {
-    const id = url.replace("/banners/", "");
+    const id = url.replace("/banners/", "").split("?")[0];
     return {
       data: mockBanners.find((item) => item.id === id) ?? mockBanners[0],
       message: "Mock banner",

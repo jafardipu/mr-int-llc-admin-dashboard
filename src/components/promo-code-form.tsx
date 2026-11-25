@@ -1,17 +1,38 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { addDays, toDateInput, todayInput } from "@/lib/dates";
 import {
   useCreatePromoCodeMutation,
   useGetPromoCodeQuery,
   useUpdatePromoCodeMutation,
 } from "@/store/api";
 
-function toDateInput(value?: string | null) {
-  if (!value) return "";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "";
-  return date.toISOString().slice(0, 10);
+type DateKey = "startsAt" | "expiresAt";
+
+/**
+ * Date rules. Dates are sent as `YYYY-MM-DD`, which the backend stores as 00:00 UTC, and a code
+ * counts as expired from that moment. So the expiry must be a later day than the start (or than
+ * today when there's no start), or the code could never be used. Dates already saved on a
+ * running or expired code may stay as they are.
+ */
+function dateErrors(
+  form: { startsAt: string; expiresAt: string },
+  saved: Partial<Record<DateKey, string>>,
+): Partial<Record<DateKey, string>> {
+  const today = todayInput();
+  const errors: Partial<Record<DateKey, string>> = {};
+  if (form.startsAt && form.startsAt !== saved.startsAt && form.startsAt < today) {
+    errors.startsAt = "The start date can't be before today";
+  }
+  if (form.expiresAt) {
+    if (form.startsAt && form.expiresAt <= form.startsAt) {
+      errors.expiresAt = "The expiry date must be after the start date";
+    } else if (!form.startsAt && form.expiresAt !== saved.expiresAt && form.expiresAt <= today) {
+      errors.expiresAt = "The expiry date must be after today";
+    }
+  }
+  return errors;
 }
 
 const empty = {
@@ -40,11 +61,14 @@ export function PromoCodeForm({
   const [createPromo, createState] = useCreatePromoCodeMutation();
   const [updatePromo, updateState] = useUpdatePromoCodeMutation();
   const [form, setForm] = useState(empty);
+  const [savedDates, setSavedDates] = useState<Partial<Record<DateKey, string>>>({});
   const [error, setError] = useState("");
+  const invalidDates = dateErrors(form, savedDates);
 
   useEffect(() => {
     const promo = existing?.data;
     if (!promo) return;
+    setSavedDates({ startsAt: toDateInput(promo.startsAt), expiresAt: toDateInput(promo.expiresAt) });
     setForm({
       code: promo.code ?? "",
       description: promo.description ?? "",
@@ -65,9 +89,14 @@ export function PromoCodeForm({
     setForm((prev) => ({ ...prev, [key]: value }));
   }
 
-  async function onSubmit(event: React.FormEvent) {
+  async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError("");
+    const firstInvalid = (["startsAt", "expiresAt"] as const).find((key) => invalidDates[key]);
+    if (firstInvalid) {
+      (event.currentTarget.elements.namedItem(firstInvalid) as HTMLInputElement | null)?.focus();
+      return;
+    }
     const payload = {
       code: form.code.trim().toUpperCase(),
       description: form.description.trim() || null,
@@ -102,6 +131,8 @@ export function PromoCodeForm({
   const loading = createState.isLoading || updateState.isLoading;
   const inputClass =
     "h-12 w-full rounded-full border border-line bg-input px-4 text-sm outline-none focus:border-brand";
+  const invalidInputClass =
+    "h-12 w-full rounded-full border border-danger bg-input px-4 text-sm outline-none focus:border-danger";
 
   return (
     <form onSubmit={onSubmit} className="space-y-4">
@@ -212,20 +243,44 @@ export function PromoCodeForm({
           <span className="mb-2 block text-sm font-semibold">Starts at</span>
           <input
             type="date"
+            name="startsAt"
             value={form.startsAt}
+            min={todayInput()}
             onChange={(e) => setField("startsAt", e.target.value)}
-            className={inputClass}
+            aria-invalid={invalidDates.startsAt ? true : undefined}
+            aria-describedby={invalidDates.startsAt ? "promo-startsAt-error" : undefined}
+            className={invalidDates.startsAt ? invalidInputClass : inputClass}
           />
+          {invalidDates.startsAt ? (
+            <span id="promo-startsAt-error" className="mt-1.5 block px-1 text-xs font-medium text-danger">
+              {invalidDates.startsAt}
+            </span>
+          ) : (
+            <span className="mt-1.5 block px-1 text-xs text-muted">Empty = usable right away</span>
+          )}
         </label>
 
         <label className="block">
           <span className="mb-2 block text-sm font-semibold">Expires at</span>
           <input
             type="date"
+            name="expiresAt"
             value={form.expiresAt}
+            min={addDays(form.startsAt || todayInput(), 1)}
             onChange={(e) => setField("expiresAt", e.target.value)}
-            className={inputClass}
+            aria-invalid={invalidDates.expiresAt ? true : undefined}
+            aria-describedby={invalidDates.expiresAt ? "promo-expiresAt-error" : "promo-expiresAt-hint"}
+            className={invalidDates.expiresAt ? invalidInputClass : inputClass}
           />
+          {invalidDates.expiresAt ? (
+            <span id="promo-expiresAt-error" className="mt-1.5 block px-1 text-xs font-medium text-danger">
+              {invalidDates.expiresAt}
+            </span>
+          ) : (
+            <span id="promo-expiresAt-hint" className="mt-1.5 block px-1 text-xs text-muted">
+              The code stops working at 12:00 AM (UTC) on this day
+            </span>
+          )}
         </label>
 
         <label className="block">
