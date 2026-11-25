@@ -52,7 +52,15 @@ The app is effectively a **client-side SPA** on the App Router. Pages and statef
 - [src/lib/auth.ts](src/lib/auth.ts) stores the access token, refresh token and user JSON in `localStorage` (`mr_admin_*` keys).
 - `StoreProvider` dispatches `hydrateAuth()` on mount to copy them into `authSlice`. Until that runs, `auth.hydrated` is `false`. `AuthGuard` and the login page wait for `hydrated` before redirecting.
 - Only roles `admin` and `supper_admin` may log in (`isAdminRole`). **`supper_admin` is spelled that way on the backend; do not "fix" it.**
-- Any 401 response dispatches `logout()` from `baseQuery`. The refresh token is stored, but there is no refresh flow.
+- **Token refresh** happens in [src/store/authProxy.ts](src/store/authProxy.ts), which `baseQuery` runs on every request (GET and mutations alike).
+  - When the access token expires within 24 hours, it refreshes before the request, and again on app start.
+  - On a 401 "unauthorized" or "you are not authorized!", it calls `POST /auth/refresh-token` (JSON body, `credentials: "omit"`) and retries the request exactly once.
+  - Only one refresh runs at a time, also across tabs (Web Locks). Other tabs follow through the `storage` event.
+  - Any error from the refresh endpoint, a missing refresh token, or a blocked/deleted/unverified account logs the admin out. `endSession()` stores the reason for the login page, the store resets the API cache on `logout`, and AuthGuard redirects to /login.
+  - A network error keeps the tokens.
+  - 401 "You are not authorized" (role) shows "You don't have permission for this" and does not log out.
+  - Backend messages are compared exactly.
+  - It can't be a Next.js middleware/proxy, because the tokens are in localStorage.
 
 ### Data layer (RTK Query)
 All endpoints live in one `createApi` in [src/store/api.ts](src/store/api.ts). The custom `baseQuery` in [src/store/baseQuery.ts](src/store/baseQuery.ts) works like this:

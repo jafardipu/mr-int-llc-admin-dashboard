@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { isAdminRole } from "@/lib/auth";
+import { isAdminRole, takeLogoutReason } from "@/lib/auth";
 import { useLoginMutation } from "@/store/api";
 import { setCredentials } from "@/store/authSlice";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
@@ -21,6 +21,13 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [remember, setRemember] = useState(true);
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState<string | null>(null);
+
+  // Why the last session ended (expired, blocked...), set by authProxy's endSession. Read once.
+  useEffect(() => {
+    const reason = takeLogoutReason();
+    if (reason) setNotice(reason);
+  }, []);
 
   useEffect(() => {
     if (hydrated && token && isAdminRole(user?.role)) {
@@ -133,6 +140,11 @@ export default function LoginPage() {
                 Forgot password?
               </Link>
             </div>
+            {notice && !error ? (
+              <p role="status" className="rounded-[14px] bg-warning-bg px-4 py-3 text-sm text-warning">
+                {notice}
+              </p>
+            ) : null}
             {error ? <p className="text-sm text-danger">{error}</p> : null}
             <button
               type="submit"
