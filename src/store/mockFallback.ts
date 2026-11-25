@@ -212,16 +212,10 @@ export function mockFallback(args: string | FetchArgs): Envelope<unknown> | null
       message: "Mock support messages",
     };
   }
-  if (url.startsWith("/faq/") && url !== "/faq") {
-    const id = url.replace("/faq/", "");
-    return {
-      data: mockFaqs.find((item) => item.id === id) ?? mockFaqs[0],
-      message: "Mock faq",
-    };
-  }
   if (url.startsWith("/faq")) {
+    const items = [...mockFaqs].sort((a, b) => a.order - b.order);
     return {
-      data: { data: mockFaqs, meta: { total: mockFaqs.length, page: 1, limit: 100 } },
+      data: { data: items, meta: { total: items.length, page: 1, limit: 500 } },
       message: "Mock faqs",
     };
   }

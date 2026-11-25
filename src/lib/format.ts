@@ -76,5 +76,7 @@ export function notificationHref(item: { orderId?: string | null; message?: stri
   if (item.orderId) return `/orders/${item.orderId}`;
   // Prep notifications carry no request id, so they open the review queue.
   if (isPrepNotification(item)) return PREP_QUEUE_HREF;
+  // Sent when a wholesale account pays its one-time fee; it carries no user id.
+  if (item.message?.trim().toLowerCase() === "new wholesale account") return "/customers";
   return "/notifications";
 }

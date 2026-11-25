@@ -43,6 +43,7 @@ const nav = [
 
 const settings = [
   { href: "/settings/profile", label: "Edit Profile" },
+  { href: "/settings/pricing", label: "Pricing" },
   { href: "/settings/terms", label: "Terms & Conditions" },
   { href: "/settings/privacy", label: "Privacy Policy" },
 ];

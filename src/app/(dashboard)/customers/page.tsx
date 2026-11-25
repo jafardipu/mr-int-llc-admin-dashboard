@@ -7,6 +7,7 @@ import { PageHeader } from "@/components/page-header";
 import { StatusPill } from "@/components/status-pill";
 import { BlockAction, TableActions, ViewAction } from "@/components/table-actions";
 import { FilterTabs, Toolbar, TypeChip } from "@/components/ui";
+import { WholesaleFeeStatus } from "@/components/wholesale-fee-status";
 import { prettyDate } from "@/lib/format";
 import type { AdminUser } from "@/lib/types";
 import { asList, useBlockUserMutation, useGetUsersQuery } from "@/store/api";
@@ -91,7 +92,7 @@ export default function CustomersPage() {
       </div>
       <TableCard footer={<Pagination page={page} total={list.total} limit={10} onPage={setPage} />}>
         <Table>
-          <THead columns={["User", "Email", "Phone", "Role", "Status", "Join Date", "Actions"]} />
+          <THead columns={["User", "Email", "Phone", "Role", "Wholesale fee", "Status", "Join Date", "Actions"]} />
           <tbody>
             {list.items.map((user) => {
               const nextStatus = user.status === "blocked" ? "active" : "blocked";
@@ -113,6 +114,9 @@ export default function CustomersPage() {
                   <td className="px-6 py-4 text-slate">{user.phoneNumber || "—"}</td>
                   <td className="px-6 py-4">
                     <TypeChip value={user.role} />
+                  </td>
+                  <td className="px-6 py-4 text-sm">
+                    <WholesaleFeeStatus user={user} />
                   </td>
                   <td className="px-6 py-4">
                     <StatusPill value={user.status} />

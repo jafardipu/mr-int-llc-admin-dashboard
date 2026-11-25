@@ -6,6 +6,7 @@ import type {
   BrandRecord,
   CategoryRecord,
   ContentsRecord,
+  StorePrices,
   DealRecord,
   DealType,
   FaqRecord,
@@ -282,7 +283,12 @@ export const api = createApi({
       query: (key) => ({ url: "/contents", params: key ? { key } : undefined }),
       providesTags: ["Contents"],
     }),
-    updateContents: build.mutation<Envelope<ContentsRecord>, Partial<ContentsRecord>>({
+    // Send only what changed. `prices` must hold numbers (strings are rejected); the text forms
+    // never send it, so they can't overwrite prices. The response is the full contents record.
+    updateContents: build.mutation<
+      Envelope<ContentsRecord>,
+      Partial<Omit<ContentsRecord, "prices">> & { prices?: Partial<StorePrices> }
+    >({
       query: (body) => ({ url: "/contents", method: "PATCH", body }),
       invalidatesTags: ["Contents"],
     }),
@@ -334,42 +340,61 @@ export const api = createApi({
       query: (id) => ({ url: `/banners/${id}`, method: "DELETE" }),
       invalidatesTags: ["Banners"],
     }),
+    // FAQs are site-wide and already sorted by `order`. Load them all in one request (reordering
+    // needs the complete list); the backend's default page size is only 10.
     getFaqs: build.query<
-      Envelope<{ data: FaqRecord[]; meta?: { total?: number } }>,
-      ListParams | void
+      Envelope<{ data: FaqRecord[]; meta?: { page?: number; limit?: number; total?: number } }>,
+      { limit: number } | void
     >({
-      query: (params) => ({
-        url: "/faq",
-        params: {
-          page: 1,
-          limit: 100,
-          include: "category",
-          ...(params ?? {}),
-        },
-      }),
+      query: (params) => ({ url: "/faq", params: { limit: params?.limit ?? 500 } }),
       providesTags: ["Faqs"],
     }),
-    getFaq: build.query<Envelope<FaqRecord>, string>({
-      query: (id) => `/faq/${id}`,
-      providesTags: (_r, _e, id) => [{ type: "Faqs", id }],
-    }),
-    createFaq: build.mutation<
-      Envelope<FaqRecord>,
-      { question: string; answer: string; categoryId?: string }
-    >({
+    createFaq: build.mutation<Envelope<FaqRecord>, { question: string; answer: string }>({
       query: (body) => ({ url: "/faq", method: "POST", body }),
       invalidatesTags: ["Faqs"],
     }),
-    updateFaq: build.mutation<
-      Envelope<FaqRecord>,
-      { id: string; body: { question?: string; answer?: string; categoryId?: string | null } }
-    >({
+    // Position can't change here: never send `order`.
+    updateFaq: build.mutation<Envelope<FaqRecord>, { id: string; body: { question?: string; answer?: string } }>({
       query: ({ id, body }) => ({ url: `/faq/${id}`, method: "PATCH", body }),
       invalidatesTags: ["Faqs"],
     }),
     deleteFaq: build.mutation<Envelope<unknown>, string>({
       query: (id) => ({ url: `/faq/${id}`, method: "DELETE" }),
       invalidatesTags: ["Faqs"],
+    }),
+    /**
+     * Sends every FAQ id in the new display order. The list shows the new order at once; on
+     * success it's replaced with the server's list, on failure it's put back and refetched.
+     */
+    reorderFaqs: build.mutation<Envelope<FaqRecord[]>, string[]>({
+      query: (ids) => ({ url: "/faq/reorder", method: "PATCH", body: { ids } }),
+      async onQueryStarted(ids, { dispatch, getState, queryFulfilled }) {
+        const cachedArgs = api.util.selectCachedArgsForQuery(getState(), "getFaqs");
+        const patches = cachedArgs.map((arg) =>
+          dispatch(
+            api.util.updateQueryData("getFaqs", arg, (draft) => {
+              const items = draft.data?.data;
+              if (!Array.isArray(items)) return;
+              const byId = new Map(items.map((faq) => [faq.id, faq]));
+              draft.data.data = ids.flatMap((id) => byId.get(id) ?? []);
+            }),
+          ),
+        );
+        try {
+          const { data } = await queryFulfilled;
+          if (!Array.isArray(data.data)) return;
+          cachedArgs.forEach((arg) =>
+            dispatch(
+              api.util.updateQueryData("getFaqs", arg, (draft) => {
+                draft.data = { data: data.data, meta: { ...draft.data?.meta, total: data.data.length } };
+              }),
+            ),
+          );
+        } catch {
+          patches.forEach((patch) => patch.undo());
+          dispatch(api.util.invalidateTags(["Faqs"]));
+        }
+      },
     }),
     getSupportMessages: build.query<
       Envelope<{ data: SupportMessageRecord[]; meta?: { total?: number } }>,
@@ -502,10 +527,10 @@ export const {
   useUpdateBannerMutation,
   useDeleteBannerMutation,
   useGetFaqsQuery,
-  useGetFaqQuery,
   useCreateFaqMutation,
   useUpdateFaqMutation,
   useDeleteFaqMutation,
+  useReorderFaqsMutation,
   useGetSupportMessagesQuery,
   useGetSupportMessageQuery,
   useReplySupportMessageMutation,

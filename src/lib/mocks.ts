@@ -36,6 +36,7 @@ const customers: AdminUser[] = [
     status: "active",
     profile: "/images/avatar-profile.png",
     createdAt: "2025-01-12T10:00:00.000Z",
+    wholesaleFee: { status: "paid", amount: 20, paidAt: "2025-01-12T10:30:00.000Z" },
   },
   {
     id: "c2",
@@ -52,6 +53,7 @@ const customers: AdminUser[] = [
     role: "wholesale",
     status: "active",
     createdAt: "2025-03-18T10:00:00.000Z",
+    wholesaleFee: { status: "pending", amount: 20, paidAt: null },
   },
   {
     id: "c4",
@@ -68,6 +70,7 @@ const customers: AdminUser[] = [
     role: "wholesale",
     status: "active",
     createdAt: "2025-04-21T10:00:00.000Z",
+    wholesaleFee: null,
   },
 ];
 
@@ -454,15 +457,17 @@ export const mockFaqs: FaqRecord[] = [
     id: "faq1",
     question: "How does wholesale pricing work?",
     answer: "Wholesale prices unlock automatically when your account has the wholesale role and minimum quantities are met.",
-    categoryId: "cat1",
-    category: { id: "cat1", name: "Electronics" },
+    order: 1,
     createdAt: now,
+    updatedAt: now,
   },
   {
     id: "faq2",
     question: "Can I track my order status?",
-    answer: "Yes. Open your orders page to see payment confirmation, processing, shipping, and delivery updates.",
+    answer: "Yes. Open your orders page to see payment confirmation, processing, shipping, and delivery updates.\nYou also get an email at each step.",
+    order: 2,
     createdAt: now,
+    updatedAt: now,
   },
 ];
 
@@ -470,15 +475,29 @@ export const mockBanners: BannerRecord[] = [
   {
     id: "banner1",
     image: "https://placehold.co/1400x500?text=MR+International",
-    link: "/products",
+    targetType: "product",
+    productId: "p1",
+    product: { id: "p1", name: "Wireless Headphones", sku: "MR-HP-001", retailPrice: 120, status: "active", images: [] },
+    discountPercent: 20,
+    startDate: new Date(Date.now() - 2 * 86_400_000).toISOString().slice(0, 10) + "T00:00:00.000Z",
+    endDate: new Date(Date.now() + 5 * 86_400_000).toISOString().slice(0, 10) + "T23:59:59.999Z",
     isActive: true,
     createdAt: now,
   },
   {
     id: "banner2",
     image: "https://placehold.co/1400x500?text=Seasonal+Deals",
-    link: "/products?deal=true",
+    targetType: "category",
+    categoryId: "cat1",
+    category: { id: "cat1", name: "Electronics", status: "active", _count: { products: 80 } },
     isActive: true,
+    createdAt: now,
+  },
+  {
+    id: "banner3",
+    image: "https://placehold.co/1400x500?text=Old+banner",
+    link: "/products?deal=true",
+    isActive: false,
     createdAt: now,
   },
 ];
@@ -489,4 +508,5 @@ export const mockContents: ContentsRecord = {
     "These Terms & Conditions govern use of the MR International LLC wholesale and retail platform.",
   privacyPolicy:
     "MR International LLC collects account, order, and payment information only to fulfill purchases and support.",
+  prices: { shippingFee: 10, taxRate: 0, wholesaleAccountFee: 20 },
 };

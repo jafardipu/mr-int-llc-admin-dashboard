@@ -87,6 +87,20 @@ When the user keeps an existing image, its URL goes in the JSON payload instead 
   - A field's message appears under it once the field is blurred or after the first submit.
   - Backend validation errors, a duplicate SKU (409) and a missing brand or category (404) are mapped onto fields with `apiFieldErrors` from `api-error.ts`.
   - The other forms still rely on native `required` attributes.
+- **Banners (carousel):** each banner targets one product or one category (`targetType` + `productId`/`categoryId`), and can have an optional `discountPercent` with whole-day UTC offer dates. The rules and date helpers are in [src/lib/banner-schema.ts](src/lib/banner-schema.ts).
+  - The backend applies the discount to prices: higher banner % wins, the lower of the deal and banner price wins, and the % is taken off the retail or wholesale price.
+  - The admin only stores and previews it.
+  - The old free-text `link` exists only on legacy banners.
+- **FAQs** are site-wide (no category) and ordered by `order`. The backend rejects `categoryId`/`include` with a 400.
+  - The page loads all FAQs in one request (`limit` 500) and never re-sorts them.
+  - Positions are shown as index + 1, because `order` can have gaps.
+  - Reordering uses dnd-kit (`@dnd-kit/core` + `sortable`) plus Move up/down buttons. It sends every id to `PATCH /faq/reorder`.
+  - `reorderFaqs` updates the cache before the response arrives, replaces the list with the response, and undoes the change and refetches on failure.
+- **Store pricing** (`/settings/pricing`) edits `contents.prices` (`shippingFee`, `taxRate`, `wholesaleAccountFee`).
+  - It sends `PATCH /contents { prices }` with numbers only, and only the changed fields.
+  - The rules and backend error messages are in [src/lib/pricing.ts](src/lib/pricing.ts).
+  - Saving a wholesale fee of 0 unlocks unpaid wholesale accounts for good, so the page asks for confirmation first.
+  - The text-content pages send only their own field, never `prices`.
 - **Terms and privacy** pages share `ContentSettings`, keyed by the `field` prop (`termsAndCondition` / `privacyPolicy`).
 - **Toasts:** `toast.success()` / `toast.error()` from [src/components/toast.tsx](src/components/toast.tsx). The `<Toaster />` is mounted in `AdminShell`.
 - **Delete confirmation:** `ConfirmDeleteAction` ([src/components/confirm-delete-action.tsx](src/components/confirm-delete-action.tsx)) wraps a delete button in an antd Popconfirm. Keep antd imports out of `table-actions.tsx`: every list page imports that file, so antd would be added to all of them.

@@ -38,6 +38,8 @@ export interface AdminUser {
   isVerified?: boolean;
   createdAt?: string;
   orders?: OrderRecord[];
+  /** One-time wholesale account fee; null when the account never needed to pay one. */
+  wholesaleFee?: { status: PaymentStatus | string; amount: number; paidAt: string | null } | null;
 }
 
 export interface AuthPayload {
@@ -223,16 +225,37 @@ export interface PrepRecord {
   user?: Pick<AdminUser, "id" | "name" | "email" | "role" | "phoneNumber" | "profile">;
 }
 
+/** Admin-set store prices, kept on the contents record. Amounts in USD, `taxRate` in %. */
+export interface StorePrices {
+  shippingFee: number;
+  taxRate: number;
+  wholesaleAccountFee: number;
+}
+
 export interface ContentsRecord {
   id?: string;
   termsAndCondition?: string;
   privacyPolicy?: string;
   aboutUs?: string;
+  prices?: StorePrices;
 }
+
+export type BannerTarget = "product" | "category";
 
 export interface BannerRecord {
   id: string;
   image: string;
+  /** Where the banner sends shoppers. Null only on banners made before targets existed. */
+  targetType?: BannerTarget | null;
+  productId?: string | null;
+  categoryId?: string | null;
+  product?: Pick<ProductRecord, "id" | "name" | "sku" | "images" | "status" | "retailPrice"> | null;
+  category?: (Pick<CategoryRecord, "id" | "name" | "status"> & { _count?: { products?: number } }) | null;
+  /** Optional % off the target's products while `startDate` ≤ now ≤ `endDate`. */
+  discountPercent?: number | null;
+  startDate?: string | null;
+  endDate?: string | null;
+  /** Legacy free-text link, replaced by the target. */
   link?: string | null;
   isActive?: boolean;
   isDeleted?: boolean;
@@ -240,12 +263,12 @@ export interface BannerRecord {
   updatedAt?: string;
 }
 
+/** Site-wide FAQ. `order` sets the display position (lowest first) and can have gaps (1, 2, 4). */
 export interface FaqRecord {
   id: string;
   question: string;
   answer: string;
-  categoryId?: string | null;
-  category?: { id: string; name: string } | null;
+  order: number;
   createdAt?: string;
   updatedAt?: string;
 }
